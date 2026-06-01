@@ -23,40 +23,6 @@ IMAGE_PROMPT = "simple product photo of a white mug on a clean table"
 EDIT_PROMPT = "turn this simple reference image into a clean ecommerce product photo"
 BANNNA_PROMPT = "犬夜叉大战奈落，日式热血动漫风格，动态构图，刀光和妖气碰撞"
 
-OPENAI_IMAGE_MODELS = ["gpt-image-1", "gpt-image-1.5", "gpt-image-2"]
-BANNNA_MODELS = [
-    "gemini-3.0-pro-image_16-9_1k",
-    "gemini-3.0-pro-image_16-9_2k",
-    "gemini-3.0-pro-image_16-9_4k",
-    "gemini-3.0-pro-image_9-16_1k",
-    "gemini-3.0-pro-image_9-16_2k",
-    "gemini-3.0-pro-image_9-16_4k",
-    "gemini-3.0-pro-image_1-1_1k",
-    "gemini-3.0-pro-image_1-1_2k",
-    "gemini-3.0-pro-image_1-1_4k",
-    "gemini-3.0-pro-image_4-3_1k",
-    "gemini-3.0-pro-image_4-3_2k",
-    "gemini-3.0-pro-image_4-3_4k",
-    "gemini-3.0-pro-image_3-4_1k",
-    "gemini-3.0-pro-image_3-4_2k",
-    "gemini-3.0-pro-image_3-4_4k",
-    "gemini-3.1-flash-image_16-9_1k",
-    "gemini-3.1-flash-image_16-9_2k",
-    "gemini-3.1-flash-image_16-9_4k",
-    "gemini-3.1-flash-image_9-16_1k",
-    "gemini-3.1-flash-image_9-16_2k",
-    "gemini-3.1-flash-image_9-16_4k",
-    "gemini-3.1-flash-image_1-1_1k",
-    "gemini-3.1-flash-image_1-1_2k",
-    "gemini-3.1-flash-image_1-1_4k",
-    "gemini-3.1-flash-image_4-3_1k",
-    "gemini-3.1-flash-image_4-3_2k",
-    "gemini-3.1-flash-image_4-3_4k",
-    "gemini-3.1-flash-image_3-4_1k",
-    "gemini-3.1-flash-image_3-4_2k",
-    "gemini-3.1-flash-image_3-4_4k",
-]
-
 NON_CHAT_KEYWORDS = (
     "gpt-image",
     "image",
@@ -74,14 +40,6 @@ NON_CHAT_KEYWORDS = (
 def is_likely_non_chat_model(model: str) -> bool:
     text = (model or "").lower()
     return any(keyword in text for keyword in NON_CHAT_KEYWORDS)
-
-
-def default_models_for(probe_type: str) -> list[str]:
-    if probe_type == "banna_image":
-        return list(BANNNA_MODELS)
-    if probe_type in {"image_generation", "image_edit", "responses_image"}:
-        return list(OPENAI_IMAGE_MODELS)
-    return []
 
 
 def skipped_chat_result(model: str) -> dict[str, Any]:

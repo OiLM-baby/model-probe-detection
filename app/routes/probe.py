@@ -13,7 +13,6 @@ from pydantic import BaseModel
 
 from app.core.error_category import classify_error
 from app.core.multimodal_probe import (
-    default_models_for,
     is_likely_non_chat_model,
     probe_multimodal,
     skipped_chat_result,
@@ -146,10 +145,7 @@ def run_probe(body: ProbeRunRequest):
         list_error = ""
         list_latency_ms = 0
 
-        if not models and probe_type != "chat":
-            models = default_models_for(probe_type)
-
-        if not models and probe_type == "chat":
+        if not models:
             tmp = LLMClient(base_url=base_url, api_key=body.api_key, model="", api_format=api_format)
             try:
                 models, list_latency_ms, list_error = tmp.list_models()
