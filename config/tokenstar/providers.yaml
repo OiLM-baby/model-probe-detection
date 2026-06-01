@@ -4,9 +4,9 @@ app:
   default_suite: availability
 environments:
   test:
-    base_url: https://token-gateway.clawos-dev.metacarbon-inc.com
+    base_url: ''
   prod:
-    base_url: https://token-gateway.clawos.metacarbon-inc.com
+    base_url: ''
 defaults:
   format: openai
   timeout: 180
@@ -130,7 +130,7 @@ suites:
   - political_hate_safety
   - political_rumor_uncertainty
 providers:
-- name: clawos-token-gateway
+- name: default-provider
   enabled: false
   api_key: $API_TEST_UI_DETECTION_KEY
   models: auto
