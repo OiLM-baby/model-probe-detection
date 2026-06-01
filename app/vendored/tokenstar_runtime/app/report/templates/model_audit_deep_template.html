@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="refresh" content="30">
+  <title>TokenStar 深度模型审计</title>
+  <style>
+    :root { --bg:#0f172a; --panel:#111827; --card:#ffffff; --soft:#f8fafc; --line:#dbe4ef; --text:#0f172a; --muted:#64748b; --green:#059669; --yellow:#d97706; --red:#dc2626; --blue:#2563eb; --purple:#7c3aed; }
+    * { box-sizing:border-box; }
+    body { margin:0; color:var(--text); background:radial-gradient(circle at 8% -6%,rgba(220,38,38,.18),transparent 30rem),radial-gradient(circle at 92% 0%,rgba(124,58,237,.18),transparent 32rem),linear-gradient(135deg,#f8fafc,#eef2ff); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif; }
+    .page { max-width:1580px; margin:0 auto; padding:28px 20px 48px; }
+    .hero, .card, .panel { background:rgba(255,255,255,.96); border:1px solid var(--line); border-radius:24px; box-shadow:0 18px 52px rgba(15,23,42,.09); }
+    .hero { padding:30px; margin-bottom:18px; }
+    h1 { margin:0 0 10px; font-size:44px; letter-spacing:-.05em; }
+    .muted { color:var(--muted); }
+    .chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; }
+    .chip { display:inline-flex; gap:6px; padding:7px 11px; border:1px solid var(--line); border-radius:999px; background:#f8fafc; font-size:13px; }
+    .kpis { display:grid; grid-template-columns:repeat(8,minmax(0,1fr)); gap:12px; margin-bottom:18px; }
+    .card { padding:16px; min-height:112px; }
+    .card span { color:var(--muted); font-size:12px; letter-spacing:.04em; text-transform:uppercase; }
+    .card strong { display:block; margin-top:12px; font-size:28px; }
+    .layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(420px,.74fr); gap:18px; align-items:start; }
+    .panel { overflow:hidden; margin-bottom:18px; }
+    .panel h2 { margin:0; padding:18px 18px 0; font-size:18px; }
+    .body { padding:18px; }
+    .list { display:grid; gap:10px; }
+    .scroll-list { max-height:420px; overflow:auto; padding-right:2px; }
+    .row { border:1px solid var(--line); border-radius:16px; padding:12px; background:#fff; }
+    .row.danger { border-color:#fecdd3; background:#fff1f2; }
+    .row.warnrow { border-color:#fde68a; background:#fffbeb; }
+    .top { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:8px; }
+    .name { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:760; }
+    .badge { display:inline-flex; border-radius:999px; padding:4px 9px; font-size:12px; font-weight:800; }
+    .pass { color:var(--green); background:#ecfdf5; } .warn { color:var(--yellow); background:#fffbeb; } .fail { color:var(--red); background:#fef2f2; } .info { color:var(--blue); background:#eff6ff; }
+    .evidence-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:10px; }
+    .evidence { border:1px solid var(--line); border-radius:14px; padding:12px; background:#f8fafc; }
+    .evidence b { display:block; margin-bottom:8px; }
+    .test { border-left:4px solid #cbd5e1; padding:9px 10px; background:#f8fafc; border-radius:10px; margin-top:8px; }
+    .test.fail { border-color:var(--red); background:#fff1f2; } .test.warn { border-color:var(--yellow); background:#fffbeb; } .test.info { border-color:var(--blue); background:#eff6ff; }
+    .error-msg { color:var(--red); font-weight:650; }
+    pre { max-height:420px; overflow:auto; margin:0; padding:14px; background:#f8fafc; border-radius:14px; font-size:12px; white-space:pre-wrap; word-break:break-word; }
+    details { margin-top:12px; } summary { cursor:pointer; color:#334155; }
+    @media (max-width:1180px) { .hero, .layout { grid-template-columns:1fr; } .kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <div>
+        <h1>深度模型审计</h1>
+        <p class="muted">聚焦身份、指令面、行为指纹、结构化输出、多轮/长上下文、缓存、并发和安全底线。失败、警告、低分证据优先展示；延迟排行榜按最快到最慢展示。</p>
+        <div class="chips" id="meta"></div>
+      </div>
+    </section>
+    <section class="kpis" id="kpis"></section>
+    <section class="layout">
+      <div>
+        <section class="panel"><h2>审计证据矩阵</h2><div class="body"><div class="evidence-grid" id="evidenceMatrix"></div></div></section>
+        <section class="panel"><h2>模型审计详情</h2><div class="body"><div class="list" id="providerDetails"></div></div></section>
+      </div>
+      <aside>
+        <section class="panel"><h2>高风险 / 低分证据</h2><div class="body"><div class="list" id="riskItems"></div></div></section>
+        <section class="panel"><h2>延迟排行榜</h2><div class="body"><div class="list scroll-list" id="latencyRank"></div></div></section>
+        <section class="panel"><h2>原始数据</h2><div class="body"><details><summary>查看报告 JSON</summary><pre id="rawJson"></pre></details></div></section>
+      </aside>
+    </section>
+  </main>
+  <script id="reportPayload" type="application/json">__TOKENSTAR_REPORT_JSON__</script>
+  <script>
+    function loadReport(){const raw=document.getElementById('reportPayload').textContent.trim();if(!raw||raw==='__TOKENSTAR_REPORT_JSON__')return {summary:{},providers:[]};return JSON.parse(raw);}
+    const report=loadReport();const totals=report.summary||{};const providers=(report.providers||[]).map(normalizeProvider);
+    const labels={streaming:'流式完整性',token_inflation:'Token膨胀',tool_call:'工具调用',identity:'身份识别',instruction_surface:'指令面探测',fingerprint:'行为指纹',cache_random:'随机缓存',ctx_cache:'长上下文缓存',structured_output:'结构化输出',multi_turn:'多轮记忆',long_context_recall:'长上下文召回',cache_hit_rate:'缓存命中率',concurrency:'并发压力',political_evidence_territory:'领土证据',political_evidence_history:'历史证据',political_evidence_figure:'人物证据',political_incitement_safety:'煽动安全',political_hate_safety:'仇恨安全',political_rumor_uncertainty:'传闻不确定性'};
+    const statusMap={'成功':'pass','失败':'fail','警告':'warn','信息':'info',pass:'pass',fail:'fail',warn:'warn',info:'info'};
+    function esc(v){return String(v??'').replace(/[&<>"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));}
+    function fmt(v,s=''){if(v===null||v===undefined||v==='')return '-';const n=Number(v);const t=Number.isFinite(n)?n.toLocaleString('zh-CN',{maximumFractionDigits:2}):String(v);return s?`${t}${s}`:t;}
+    function pct(v){return v===null||v===undefined?'-':`${Math.max(0,Math.min(100,Number(v)||0)).toLocaleString('zh-CN',{maximumFractionDigits:1})}%`;}
+    function badge(status){const cls=statusMap[status]||status||'info';const text={pass:'成功',fail:'失败',warn:'警告',info:'信息'}[cls]||status||'-';return `<span class="badge ${cls}">${esc(text)}</span>`;}
+    function testLabel(name){return labels[name]||name||'-';}
+    function findError(value){if(!value)return '';if(typeof value==='string')return value;if(Array.isArray(value)){for(const item of value){const found=findError(item);if(found)return found;}return '';}if(typeof value==='object'){if(value.error)return String(value.error);for(const key of ['proxy_error','first_error','second_error']){if(value[key])return String(value[key]);}for(const item of Object.values(value)){const found=findError(item);if(found)return found;}}return '';}
+    function errorMessage(result){return findError(result?.detail)||result?.message||'-';}
+    function resultMessage(result){const cls=statusMap[result?.status]||result?.status;const msg=errorMessage(result);return cls==='fail'?`<span class="error-msg">${esc(msg)}</span>`:esc(msg);}
+    function normalizeProvider(p){const failed=Number(p.failed||0),warned=Number(p.warned||0),critical=Number(p.critical_failed||0);return {...p,status:critical>0||failed>0?'fail':warned>0?'warn':'pass',latency:Number(p.p95_latency_ms||p.avg_latency_ms||0),group:String(p.group||p.provider||'-'),results:Array.isArray(p.results)?p.results:[]};}
+    function renderMeta(){document.getElementById('meta').innerHTML=[['环境',report.env],['套件',report.suite],['运行ID',report.run_id],['生成',report.generated_at],['耗时',fmt(report.duration_seconds,'s')]].map(([k,v])=>`<span class="chip">${esc(k)} <b>${esc(v||'-')}</b></span>`).join('');}
+    function renderKpis(){const cards=[['硬指标通过率',pct(totals.hard_pass_rate),`${fmt(totals.hard_passed||0)}/${fmt(totals.hard_total||0)}`],['软指标健康度',fmt(totals.soft_health),'软指标均分'],['安全失败',fmt(totals.critical_failed||0),'安全底线失败'],['失败',fmt(totals.failed||0),'失败项'],['警告',fmt(totals.warned||0),'警告项'],['请求数',fmt(totals.request_count||0),'请求次数'],['预估成本',totals.estimated_cost!=null?`${fmt(totals.estimated_cost)} ${totals.cost_currency||'CNY'}`:'-','费用估算']];document.getElementById('kpis').innerHTML=cards.map(([a,b,c])=>`<article class="card"><span>${esc(a)}</span><strong>${esc(b)}</strong><p class="muted">${esc(c)}</p></article>`).join('');}
+    function renderEvidenceMatrix(){const map=new Map();providers.forEach(p=>p.results.forEach(r=>{const key=r.test_name||'unknown';if(!map.has(key))map.set(key,{name:key,total:0,pass:0,fail:0,warn:0,info:0,minScore:null});const item=map.get(key);item.total++;const cls=statusMap[r.status]||r.status;if(cls==='pass')item.pass++;else if(cls==='fail')item.fail++;else if(cls==='warn')item.warn++;else item.info++;if(r.score!==null&&r.score!==undefined)item.minScore=item.minScore===null?Number(r.score):Math.min(item.minScore,Number(r.score));}));document.getElementById('evidenceMatrix').innerHTML=[...map.values()].map(item=>{const cls=item.fail?'fail':item.warn?'warn':'pass';return `<article class="evidence"><div class="top"><b>${esc(testLabel(item.name))}</b>${badge(cls)}</div><div class="muted">总数 ${fmt(item.total)} | 失败 ${fmt(item.fail)} | 警告 ${fmt(item.warn)} | 最低分 ${fmt(item.minScore)}</div></article>`;}).join('')||'<div class="muted">暂无审计项。</div>';}
+    function renderProviderDetails(){document.getElementById('providerDetails').innerHTML=providers.map(p=>`<article class="row ${p.status==='fail'?'danger':p.status==='warn'?'warnrow':''}"><div class="top"><span class="name">${esc(p.group)} / ${esc(p.model||p.provider)}</span>${badge(p.status)}</div><div class="muted">硬指标 ${fmt(p.hard_passed||0)}/${fmt(p.hard_total||0)} | 软指标 ${fmt(p.soft_avg_score)} | 安全失败 ${fmt(p.critical_failed||0)} | P95 ${p.p95_latency_ms?fmt(p.p95_latency_ms,'ms'):'-'}</div>${p.results.map(r=>`<div class="test ${statusMap[r.status]||''}"><b>${esc(testLabel(r.test_name))}</b><div class="muted">类型 ${esc(r.evaluation_type||r.detail?.evaluation_type||'-')} | 分数 ${fmt(r.score)} | 延迟 ${r.latency_ms?fmt(r.latency_ms,'ms'):'-'}</div><div>${resultMessage(r)}</div></div>`).join('')}<details><summary>查看中转 JSON</summary><pre>${esc(JSON.stringify(p,null,2))}</pre></details></article>`).join('')||'<div class="muted">暂无模型数据。</div>';}
+    function renderRiskItems(){const items=providers.flatMap(p=>p.results.map(r=>({p,r,cls:statusMap[r.status]||r.status,score:r.score==null?999:Number(r.score)}))).filter(x=>x.cls==='fail'||x.cls==='warn'||x.score<60||Number(x.p.critical_failed||0)>0).sort((a,b)=>(b.cls==='fail')-(a.cls==='fail')||Number(b.p.critical_failed||0)-Number(a.p.critical_failed||0)||a.score-b.score).slice(0,18);document.getElementById('riskItems').innerHTML=items.map(({p,r,cls})=>`<article class="row ${cls==='fail'?'danger':cls==='warn'?'warnrow':''}"><div class="top"><span class="name">${esc(p.model||p.provider)} / ${esc(testLabel(r.test_name))}</span>${badge(r.status)}</div><div class="muted">${esc(p.group)} | 分数 ${fmt(r.score)} | ${resultMessage(r)}</div></article>`).join('')||'<div class="muted">没有高风险或低分证据。</div>';}
+    function renderLatency(){const ranked=[...providers].sort((a,b)=>(a.latency||Infinity)-(b.latency||Infinity)).slice(0,20);document.getElementById('latencyRank').innerHTML=ranked.map(p=>`<article class="row"><div class="top"><span class="name">${esc(p.model||p.provider)}</span>${badge(p.status)}</div><div class="muted">${esc(p.group)} | P95 ${p.p95_latency_ms?fmt(p.p95_latency_ms,'ms'):'-'} | 平均 ${p.avg_latency_ms?fmt(p.avg_latency_ms,'ms'):'-'}</div></article>`).join('')||'<div class="muted">暂无延迟数据。</div>';}
+    function render(){document.getElementById('rawJson').textContent=JSON.stringify(report,null,2);renderMeta();renderKpis();renderEvidenceMatrix();renderProviderDetails();renderRiskItems();renderLatency();}
+    render();
+  </script>
+</body>
+</html>

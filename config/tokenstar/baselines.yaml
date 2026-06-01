@@ -1,0 +1,110 @@
+# TokenStar 基线配置 — 定义各套件的性能/质量基线阈值。
+# 当前结果与基线对比，偏差超过允许范围时触发告警和报告标记。
+#
+# 字段说明：
+#   latency.p95_max_ms     P95 延迟上限 (毫秒)，超出视为性能劣化
+#   latency.avg_max_ms     平均延迟上限 (毫秒)
+#   pass_rate.hard_min_pct 硬指标最低通过率 (%)，低于此值标记 CRITICAL
+#   pass_rate.soft_min_score   软指标最低平均分 (0-100)
+#   cost.max_per_request_cny   单次请求最高成本 (元)
+#   deviation.allowed_pct      指标允许偏差百分比，超出视为异常波动
+
+# ── 全局默认（所有套件继承，suite 级可覆盖）──────────────
+defaults:
+  latency:
+    p95_max_ms: 5000
+    avg_max_ms: 3000
+  pass_rate:
+    hard_min_pct: 90.0
+    soft_min_score: 60.0
+  cost:
+    max_per_request_cny: 0.5
+  deviation:
+    allowed_pct: 20.0
+
+# ── 按套件类型的基线覆盖 ─────────────────────────────────
+suites:
+  # 可用性全量测试：低延迟、高通过率
+  availability:
+    latency:
+      p95_max_ms: 3000
+      avg_max_ms: 2000
+    pass_rate:
+      hard_min_pct: 95.0
+
+  # 日常巡检：连通性 + 延迟，快速扫一遍
+  daily:
+    latency:
+      p95_max_ms: 15000
+      avg_max_ms: 10000
+    pass_rate:
+      hard_min_pct: 95.0
+
+  # 多中转联通矩阵：标准放宽，容忍跨国网络波动
+  connectivity_matrix:
+    latency:
+      p95_max_ms: 5000
+      avg_max_ms: 3000
+    pass_rate:
+      hard_min_pct: 90.0
+
+  # 轻量模型审计：预检 + 身份 + 协议，允许小模型部分不达标
+  model_audit:
+    pass_rate:
+      hard_min_pct: 80.0
+      soft_min_score: 70.0
+    latency:
+      p95_max_ms: 8000
+      avg_max_ms: 5000
+
+  # 协议兼容矩阵：验证 OpenAI/Anthropic/Responses 格式合规
+  protocol_audit:
+    pass_rate:
+      hard_min_pct: 80.0
+      soft_min_score: 70.0
+
+  # 能力探测：视觉/文件/音频/嵌入 口子声明验证
+  capability_probe:
+    pass_rate:
+      hard_min_pct: 85.0
+
+  # 缓存命中率测试：高成本，单独跑
+  cache_audit:
+    pass_rate:
+      hard_min_pct: 85.0
+
+  # 并发压力测试：8 请求并发，容忍部分超时
+  concurrency_audit:
+    pass_rate:
+      hard_min_pct: 80.0
+    latency:
+      p95_max_ms: 10000
+      avg_max_ms: 6000
+
+  # 政治敏感合规：高通过率要求，避免误标记
+  political_sensitivity:
+    pass_rate:
+      hard_min_pct: 95.0
+      soft_min_score: 80.0
+
+  # 深度审计：全协议 + 质量 + 幻觉 + 指纹，允许较大偏差
+  audit:
+    pass_rate:
+      hard_min_pct: 80.0
+      soft_min_score: 70.0
+
+  # 全量测试
+  all:
+    pass_rate:
+      hard_min_pct: 85.0
+    latency:
+      p95_max_ms: 5000
+      avg_max_ms: 3000
+
+  # 全量测试（不含政治敏感）
+  all_no_political:
+    pass_rate:
+      hard_min_pct: 85.0
+    latency:
+      p95_max_ms: 5000
+      avg_max_ms: 3000

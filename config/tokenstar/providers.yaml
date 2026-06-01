@@ -1,0 +1,187 @@
+app:
+  name: tokenstar
+  default_env: prod
+  default_suite: availability
+environments:
+  test:
+    base_url: https://token-gateway.clawos-dev.metacarbon-inc.com
+  prod:
+    base_url: https://token-gateway.clawos.metacarbon-inc.com
+defaults:
+  format: openai
+  timeout: 180
+  tests:
+  - connectivity
+  - latency
+  - cache_hit
+  - hallucination
+  - quality
+  - dialogue_reference
+suites:
+  availability:
+  - connectivity
+  - latency
+  - cache_hit
+  - hallucination
+  - quality
+  - dialogue_reference
+  daily:
+  - connectivity
+  - daily_latency
+  daily_full:
+  - connectivity
+  - latency
+  first_token_connectivity:
+  - first_token_connectivity
+  connectivity_matrix:
+  - connectivity
+  - latency
+  audit:
+  - streaming
+  - token_inflation
+  - tool_call
+  - identity
+  - instruction_surface
+  - fingerprint
+  - cache_random
+  - ctx_cache
+  - structured_output
+  - multi_turn
+  - long_context_recall
+  cache_audit:
+  - cache_official_baseline
+  - cache_hit_rate
+  benchmark:
+  - cache_official_baseline
+  - cache_hit_rate
+  model_audit:
+  - preflight
+  - identity
+  - tool_call
+  - streaming
+  concurrency_audit:
+  - concurrency
+  all:
+  - preflight
+  - connectivity
+  - latency
+  - cache_hit
+  - hallucination
+  - quality
+  - dialogue_reference
+  - streaming
+  - token_inflation
+  - tool_call
+  - identity
+  - instruction_surface
+  - fingerprint
+  - cache_random
+  - ctx_cache
+  - structured_output
+  - multi_turn
+  - long_context_recall
+  - political_evidence_territory
+  - political_evidence_history
+  - political_evidence_figure
+  - political_incitement_safety
+  - political_hate_safety
+  - political_rumor_uncertainty
+  - cache_official_baseline
+  - cache_hit_rate
+  - concurrency
+  all_no_political:
+  - preflight
+  - connectivity
+  - latency
+  - cache_hit
+  - hallucination
+  - quality
+  - dialogue_reference
+  - streaming
+  - token_inflation
+  - tool_call
+  - identity
+  - instruction_surface
+  - fingerprint
+  - cache_random
+  - ctx_cache
+  - structured_output
+  - multi_turn
+  - long_context_recall
+  - cache_official_baseline
+  - cache_hit_rate
+  - concurrency
+  protocol_audit:
+  - protocol_text_shape
+  - protocol_usage_shape
+  - protocol_finish_reason
+  - protocol_stream_shape
+  - protocol_tool_call_shape
+  capability_probe:
+  - vision_probe
+  - file_probe
+  - audio_probe
+  - embedding_probe
+  political_sensitivity:
+  - political_evidence_territory
+  - political_evidence_history
+  - political_evidence_figure
+  - political_incitement_safety
+  - political_hate_safety
+  - political_rumor_uncertainty
+providers:
+- name: clawos-token-gateway
+  enabled: false
+  api_key: $API_TEST_UI_DETECTION_KEY
+  models: auto
+thresholds:
+  connectivity_success_rate: 1.0
+  latency_p95_ms: 10000
+  cold_start_ratio_threshold: 1.5
+  cold_start_severe_ratio: 3.0
+  cache_hit_speedup_ratio: 0.85
+  quality_min_score: 60
+  hallucination_min_score: 60
+  dialogue_reference_min_score: 60
+  streaming_min_score: 60
+  token_inflation_max_short_tokens: 15
+  token_inflation_warn_short_tokens: 50
+  tool_call_min_score: 60
+  identity_min_score: 60
+  instruction_surface_min_score: 60
+  fingerprint_min_score: 60
+  cache_random_min_score: 60
+  ctx_cache_min_score: 60
+  cache_hit_rate_requests: 20
+  cache_hit_rate_warmup: 2
+  cache_hit_rate_delay: 0.2
+  cache_hit_rate_prefix_repeat: 1
+  cache_official_baseline_requests: 3
+  cache_official_baseline_delay: 0.2
+  structured_output_min_score: 60
+  multi_turn_min_score: 60
+  long_context_recall_min_score: 60
+  concurrency_requests: 8
+  concurrency_min_success_rate: 80
+  protocol_error_probe_enabled: false
+logging:
+  level: INFO
+  directory: logs
+  max_bytes: 104857600
+  backup_count: 5
+report:
+  directory: reports
+wechat:
+  enabled: false
+  webhook_url: ''
+history:
+  enabled: false
+  keep: 90
+email:
+  enabled: false
+  smtp_server: ''
+  smtp_port: 465
+  username: ''
+  password: ''
+  sender: ''
+  receivers: []

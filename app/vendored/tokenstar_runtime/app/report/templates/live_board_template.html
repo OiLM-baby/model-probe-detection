@@ -1,0 +1,844 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="refresh" content="30">
+  <title>TokenStar Live Board</title>
+  <style>
+    :root {
+      --bg0: #f8fafc;
+      --bg1: #eaf2ff;
+      --panel: rgba(255, 255, 255, 0.94);
+      --panel2: #f8fafc;
+      --line: rgba(148, 163, 184, 0.24);
+      --line2: rgba(37, 99, 235, 0.32);
+      --text: #0f172a;
+      --muted: #64748b;
+      --muted2: #94a3b8;
+      --cyan: #0891b2;
+      --blue: #2563eb;
+      --purple: #7c3aed;
+      --green: #059669;
+      --yellow: #d97706;
+      --red: #dc2626;
+      --shadow: 0 18px 56px rgba(15, 23, 42, 0.10);
+      --glow: 0 10px 30px rgba(37, 99, 235, 0.12);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 10% 0%, rgba(37, 99, 235, 0.10), transparent 30rem),
+        radial-gradient(circle at 90% 4%, rgba(14, 165, 233, 0.12), transparent 32rem),
+        linear-gradient(135deg, var(--bg0), var(--bg1) 58%, #f8fafc);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      font-feature-settings: "tnum";
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(37, 99, 235, 0.045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(37, 99, 235, 0.045) 1px, transparent 1px);
+      background-size: 38px 38px;
+      mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.35), transparent 82%);
+    }
+    body::after {
+      display: none;
+    }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    .page {
+      position: relative;
+      z-index: 1;
+      width: min(1760px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 24px 0 34px;
+    }
+    .topbar {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 320px;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+    .topbar.single {
+      grid-template-columns: 1fr;
+    }
+    .hero, .status-orb, .panel, .kpi-card, .filterbar {
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.92));
+      box-shadow: var(--shadow), inset 0 1px 0 rgba(255, 255, 255, 0.75);
+      backdrop-filter: blur(18px);
+    }
+    .hero {
+      position: relative;
+      overflow: hidden;
+      min-height: 210px;
+      border-radius: 30px;
+      padding: 28px 30px;
+    }
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: -1px;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 82% 20%, rgba(37, 99, 235, 0.10), transparent 22rem),
+        radial-gradient(circle at 24% 100%, rgba(14, 165, 233, 0.10), transparent 24rem);
+    }
+    .hero-content { position: relative; z-index: 1; }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      margin-bottom: 16px;
+      padding: 8px 12px;
+      border: 1px solid rgba(37, 99, 235, 0.18);
+      border-radius: 999px;
+      background: #eff6ff;
+      color: #1d4ed8;
+      font-size: 12px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      box-shadow: none;
+    }
+    .eyebrow::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--blue);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+    h1 {
+      margin: 0;
+      font-size: clamp(36px, 4vw, 66px);
+      line-height: 0.96;
+      letter-spacing: -0.06em;
+      text-shadow: none;
+    }
+    .subtitle {
+      max-width: 920px;
+      margin: 16px 0 20px;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.7;
+    }
+    .meta-line { display: flex; flex-wrap: wrap; gap: 10px; }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 34px;
+      padding: 7px 12px;
+      border: 1px solid rgba(148, 163, 184, 0.24);
+      border-radius: 999px;
+      background: #f8fafc;
+      color: #475569;
+      font-size: 13px;
+    }
+    .chip b { color: #0f172a; font-weight: 750; }
+    .status-orb {
+      position: relative;
+      overflow: hidden;
+      min-height: 210px;
+      border-radius: 30px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .status-orb::before {
+      content: "";
+      position: absolute;
+      inset: auto -64px -96px auto;
+      width: 230px;
+      height: 230px;
+      border-radius: 50%;
+      background: conic-gradient(from 180deg, #d1fae5, #dbeafe, #ede9fe, #d1fae5);
+      opacity: 0.95;
+      filter: blur(1px);
+    }
+    .status-orb .label { color: var(--muted); font-size: 13px; }
+    .status-orb .big {
+      position: relative;
+      z-index: 1;
+      margin: 10px 0;
+      font-size: 58px;
+      line-height: 1;
+      letter-spacing: -0.08em;
+      font-weight: 850;
+    }
+    .status-orb .note { position: relative; z-index: 1; color: var(--muted); line-height: 1.6; font-size: 13px; }
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(8, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .kpi-card {
+      position: relative;
+      overflow: hidden;
+      min-height: 118px;
+      border-radius: 22px;
+      padding: 16px;
+    }
+    .kpi-card::after {
+      content: "";
+      position: absolute;
+      right: -18px;
+      bottom: -22px;
+      width: 86px;
+      height: 86px;
+      border-radius: 28px;
+      background: linear-gradient(135deg, rgba(34, 211, 238, 0.16), rgba(167, 139, 250, 0.08));
+      transform: rotate(18deg);
+    }
+    .kpi-card span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .kpi-card strong {
+      position: relative;
+      z-index: 1;
+      display: block;
+      margin-top: 14px;
+      font-size: 30px;
+      line-height: 1;
+      letter-spacing: -0.055em;
+    }
+    .kpi-card small {
+      position: relative;
+      z-index: 1;
+      display: block;
+      margin-top: 10px;
+      color: var(--muted2);
+      font-size: 12px;
+    }
+    .tone-pass strong { color: var(--green); text-shadow: none; }
+    .tone-warn strong { color: var(--yellow); text-shadow: none; }
+    .tone-fail strong { color: var(--red); text-shadow: none; }
+    .cmp-band {
+      display: none;
+      margin-bottom: 18px;
+      border: 1px solid rgba(148, 163, 184, 0.24);
+      border-radius: 22px;
+      padding: 20px 22px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.9));
+      box-shadow: var(--shadow);
+    }
+    .cmp-band.visible { display: block; }
+    .cmp-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+    .cmp-head h2 { margin: 0; font-size: 18px; letter-spacing: -0.02em; }
+    .cmp-head span { color: var(--muted); font-size: 13px; }
+    .cmp-deltas {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .cmp-delta {
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      border-radius: 14px;
+      padding: 12px;
+      background: #ffffff;
+    }
+    .cmp-delta span { display: block; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }
+    .cmp-delta strong { display: block; margin-top: 8px; font-size: 20px; letter-spacing: -0.03em; }
+    .cmp-delta.trend-up strong { color: var(--green); }
+    .cmp-delta.trend-down strong { color: var(--red); }
+    .cmp-delta.trend-neutral strong { color: #475569; }
+    .cmp-changes { display: grid; gap: 8px; }
+    .cmp-change {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      background: #f8fafc;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+    }
+    .cmp-change.bad { background: #fef2f2; border-color: rgba(220, 38, 38, 0.18); color: var(--red); }
+    .cmp-change.good { background: #ecfdf5; border-color: rgba(5, 150, 105, 0.18); color: var(--green); }
+    .cmp-change.new { background: #eff6ff; border-color: rgba(37, 99, 235, 0.18); color: var(--blue); }
+    .cmp-none { color: var(--muted); font-size: 13px; }
+
+    .filterbar {
+      position: sticky;
+      top: 12px;
+      z-index: 5;
+      display: grid;
+      grid-template-columns: minmax(260px, 1fr) auto;
+      gap: 14px;
+      align-items: center;
+      margin-bottom: 18px;
+      border-radius: 20px;
+      padding: 12px;
+    }
+    .search {
+      width: 100%;
+      height: 42px;
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      border-radius: 14px;
+      outline: none;
+      padding: 0 14px;
+      color: var(--text);
+      background: #ffffff;
+    }
+    .search:focus { border-color: rgba(37, 99, 235, 0.55); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.10); }
+    .filters { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+    .filter-btn, .ghost-btn {
+      min-height: 38px;
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      border-radius: 999px;
+      padding: 8px 12px;
+      color: #475569;
+      background: #ffffff;
+    }
+    .filter-btn.active, .filter-btn:hover, .ghost-btn:hover {
+      border-color: rgba(37, 99, 235, 0.36);
+      color: #1d4ed8;
+      background: #eff6ff;
+      box-shadow: none;
+    }
+    .board-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.08fr) minmax(360px, 0.92fr);
+      gap: 18px;
+      align-items: start;
+    }
+    .left-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+    .panel { overflow: hidden; border-radius: 24px; }
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 18px 18px 0;
+    }
+    .panel-title { margin: 0; font-size: 17px; letter-spacing: -0.02em; }
+    .panel-subtitle { margin: 6px 0 0; color: var(--muted); font-size: 12px; }
+    .panel-body { padding: 18px; }
+    .wide { grid-column: 1 / -1; }
+    .ring-wrap { display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 18px; align-items: center; }
+    .ring {
+      --pass-deg: 0deg;
+      --warn-deg: 0deg;
+      width: 178px;
+      height: 178px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background:
+        radial-gradient(circle, #ffffff 0 56%, transparent 57%),
+        conic-gradient(var(--green) 0 var(--pass-deg), var(--yellow) var(--pass-deg) calc(var(--pass-deg) + var(--warn-deg)), var(--red) calc(var(--pass-deg) + var(--warn-deg)) 360deg);
+      box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.16), 0 12px 28px rgba(15, 23, 42, 0.08);
+    }
+    .ring strong { font-size: 34px; letter-spacing: -0.06em; }
+    .ring small { display: block; margin-top: 5px; color: var(--muted); font-size: 11px; text-align: center; letter-spacing: 0.12em; }
+    .legend { display: grid; gap: 10px; }
+    .legend-row { display: grid; grid-template-columns: 82px 1fr auto; gap: 10px; align-items: center; color: #475569; font-size: 13px; }
+    .legend-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 8px; }
+    .legend-dot.pass { background: var(--green); box-shadow: none; }
+    .legend-dot.warn { background: var(--yellow); box-shadow: none; }
+    .legend-dot.fail { background: var(--red); box-shadow: none; }
+    .bar { height: 8px; overflow: hidden; border-radius: 999px; background: #e2e8f0; }
+    .bar span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--cyan), var(--purple)); }
+    .matrix { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+    .agent-tile {
+      position: relative;
+      min-height: 62px;
+      border: 1px solid rgba(148, 163, 184, 0.24);
+      border-radius: 14px;
+      background: #ffffff;
+      color: var(--text);
+      overflow: hidden;
+      transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+    }
+    .agent-tile::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      opacity: 0.8;
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.05), transparent);
+    }
+    .agent-tile.pass { border-color: rgba(5, 150, 105, 0.32); box-shadow: 0 8px 18px rgba(5, 150, 105, 0.06); }
+    .agent-tile.warn { border-color: rgba(217, 119, 6, 0.35); box-shadow: 0 8px 18px rgba(217, 119, 6, 0.06); }
+    .agent-tile.fail { border-color: rgba(220, 38, 38, 0.38); box-shadow: 0 8px 18px rgba(220, 38, 38, 0.07); }
+    .agent-tile.info { border-color: rgba(37, 99, 235, 0.30); }
+    .agent-tile.active, .agent-tile:hover { transform: translateY(-2px) scale(1.02); border-color: rgba(37, 99, 235, 0.55); box-shadow: 0 12px 24px rgba(37, 99, 235, 0.12); }
+    .agent-tile span {
+      position: relative;
+      z-index: 1;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 3;
+      overflow: hidden;
+      padding: 10px 10px;
+      font-size: 12px;
+      line-height: 1.35;
+      text-align: left;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+    .heat-list, .rank-list, .issue-list { display: grid; gap: 10px; }
+    .rank-list { max-height: 420px; overflow: auto; padding-right: 2px; }
+    .heat-row, .rank-row, .issue-row {
+      width: 100%;
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      border-radius: 16px;
+      padding: 12px;
+      color: var(--text);
+      background: #ffffff;
+      transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+    }
+    .heat-row:hover, .rank-row:hover, .issue-row:hover, .heat-row.active { transform: translateY(-1px); border-color: rgba(37, 99, 235, 0.36); background: #f8fbff; }
+    .row-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 9px; }
+    .row-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 760; }
+    .row-meta { color: var(--muted); font-size: 12px; white-space: nowrap; }
+    .heat-track { height: 9px; overflow: hidden; border-radius: 999px; background: #e2e8f0; }
+    .heat-track span { display: block; height: 100%; border-radius: inherit; }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      padding: 4px 9px;
+      font-size: 11px;
+      font-weight: 800;
+      line-height: 1;
+      border: 1px solid transparent;
+      white-space: nowrap;
+    }
+    .status-badge::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; box-shadow: none; }
+    .status-badge.pass { color: var(--green); background: #ecfdf5; border-color: rgba(5, 150, 105, 0.18); }
+    .status-badge.warn { color: var(--yellow); background: #fffbeb; border-color: rgba(217, 119, 6, 0.20); }
+    .status-badge.fail { color: var(--red); background: #fef2f2; border-color: rgba(220, 38, 38, 0.20); }
+    .status-badge.info { color: var(--blue); background: #eff6ff; border-color: rgba(37, 99, 235, 0.18); }
+    .status-badge.unknown { color: var(--muted); background: #f1f5f9; border-color: rgba(148, 163, 184, 0.20); }
+    .detail-panel { position: sticky; top: 86px; }
+    .detail-hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 16px;
+      align-items: start;
+      padding: 18px;
+      border-radius: 20px;
+      background:
+        radial-gradient(circle at 90% 20%, rgba(37, 99, 235, 0.08), transparent 14rem),
+        #f8fafc;
+      border: 1px solid rgba(148, 163, 184, 0.22);
+    }
+    .detail-hero h2 { margin: 0; font-size: 24px; letter-spacing: -0.04em; word-break: break-word; }
+    .detail-hero p { margin: 8px 0 0; color: var(--muted); word-break: break-word; }
+    .score-pill {
+      display: grid;
+      place-items: center;
+      width: 86px;
+      height: 86px;
+      border-radius: 24px;
+      background: #ffffff;
+      border: 1px solid rgba(37, 99, 235, 0.18);
+      box-shadow: 0 10px 24px rgba(37, 99, 235, 0.10);
+    }
+    .score-pill strong { display: block; font-size: 26px; letter-spacing: -0.05em; }
+    .score-pill span { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; }
+    .metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+    .mini-metric {
+      border: 1px solid rgba(148, 163, 184, 0.20);
+      border-radius: 14px;
+      padding: 11px;
+      background: #ffffff;
+    }
+    .mini-metric span { display: block; color: var(--muted); font-size: 11px; }
+    .mini-metric strong { display: block; margin-top: 6px; font-size: 17px; }
+    .test-list { display: grid; gap: 10px; margin-top: 14px; }
+    .test-card { border: 1px solid rgba(148, 163, 184, 0.22); border-radius: 16px; padding: 12px; background: #ffffff; }
+    .test-card.fail { border-color: rgba(220, 38, 38, 0.24); background: #fef2f2; }
+    .test-card.warn { border-color: rgba(217, 119, 6, 0.24); background: #fffbeb; }
+    .test-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+    .test-name { font-weight: 750; }
+    .test-msg { color: #475569; font-size: 12px; line-height: 1.55; word-break: break-word; }
+    .error-msg { color: var(--fail); font-weight: 650; }
+    details.raw-json { margin-top: 14px; border: 1px solid rgba(148, 163, 184, 0.22); border-radius: 16px; background: #f8fafc; }
+    details.raw-json summary { padding: 12px 14px; color: #334155; cursor: pointer; }
+    pre {
+      max-height: 360px;
+      overflow: auto;
+      margin: 0;
+      padding: 0 14px 14px;
+      color: #1e293b;
+      font-size: 12px;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .empty {
+      padding: 28px;
+      color: var(--muted);
+      text-align: center;
+      border: 1px dashed rgba(148, 163, 184, 0.32);
+      border-radius: 16px;
+      background: #f8fafc;
+    }
+    @media (max-width: 1320px) {
+      .kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+      .board-grid { grid-template-columns: 1fr; }
+      .detail-panel { position: static; }
+    }
+    @media (max-width: 920px) {
+      .page { width: min(100vw - 20px, 1760px); padding-top: 10px; }
+      .topbar, .filterbar, .ring-wrap { grid-template-columns: 1fr; }
+      .left-grid { grid-template-columns: 1fr; }
+      .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .filters { justify-content: flex-start; }
+      .detail-hero, .metric-grid { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 560px) {
+      .hero { padding: 22px; border-radius: 22px; }
+      .kpi-grid, .detail-hero, .metric-grid { grid-template-columns: 1fr; }
+      .score-pill { width: 100%; height: 72px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="topbar single">
+      <header class="hero">
+        <div class="hero-content">
+          <span class="eyebrow">TokenStar 测试大屏</span>
+          <h1>模型中转测试大屏</h1>
+          <p class="subtitle">按中转、模型和测试项拆解运行结果。点击任意状态块、热力条或异常项，可以在右侧查看详细结果和原始 JSON。</p>
+          <div class="meta-line" id="metaLine"></div>
+        </div>
+      </header>
+    </section>
+
+    <section class="kpi-grid" id="kpiGrid" aria-label="核心指标"></section>
+
+    <section class="cmp-band" id="cmpBand" aria-label="历史对比">
+      <div class="cmp-head">
+        <div><h2>历史对比</h2><span id="cmpSubtitle"></span></div>
+        <span class="chip" id="cmpChip" style="display:none"></span>
+      </div>
+      <div class="cmp-deltas" id="cmpDeltas"></div>
+      <div class="cmp-changes" id="cmpChanges"></div>
+    </section>
+
+    <section class="cmp-band" id="baselineBand" aria-label="基线偏差" style="display:none">
+      <div class="cmp-head">
+        <div><h2>基线偏差</h2><span id="baselineSubtitle"></span></div>
+        <span class="chip" id="baselineChip" style="display:none"></span>
+      </div>
+      <div class="cmp-changes" id="baselineChanges"></div>
+    </section>
+
+    <section class="filterbar" aria-label="筛选工具">
+      <input class="search" id="searchInput" placeholder="搜索中转、模型、测试项或失败原因..." autocomplete="off">
+      <div class="filters" id="filters">
+        <button class="filter-btn active" data-filter="all">全部</button>
+        <button class="filter-btn" data-filter="fail">只看失败</button>
+        <button class="filter-btn" data-filter="warn">只看警告</button>
+        <button class="filter-btn" data-filter="slow">高延迟</button>
+        <button class="filter-btn" data-filter="critical">安全底线</button>
+        <button class="ghost-btn" id="clearGroup" type="button">清除中转筛选</button>
+      </div>
+    </section>
+
+    <section class="board-grid">
+      <div class="left-grid">
+        <section class="panel">
+          <div class="panel-head"><div><h2 class="panel-title">全局状态环</h2><p class="panel-subtitle">通过 / 警告 / 失败占比</p></div></div>
+          <div class="panel-body"><div class="ring-wrap"><div class="ring" id="statusRing"><div><strong id="ringRate">-</strong><small>通过率</small></div></div><div class="legend" id="statusLegend"></div></div></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head"><div><h2 class="panel-title">延迟排行榜</h2><p class="panel-subtitle">按 P95 / 平均延迟排序</p></div></div>
+          <div class="panel-body"><div class="rank-list" id="latencyRank"></div></div>
+        </section>
+
+        <section class="panel wide">
+          <div class="panel-head"><div><h2 class="panel-title">模型状态矩阵</h2><p class="panel-subtitle">每个方块代表一个中转下的模型，点击查看详情</p></div><span class="chip"><b id="visibleCount">0</b> / <span id="agentCount">0</span></span></div>
+          <div class="panel-body"><div class="matrix" id="agentMatrix"></div></div>
+        </section>
+
+        <section class="panel wide">
+          <div class="panel-head"><div><h2 class="panel-title">中转健康热力图</h2><p class="panel-subtitle">按 group 聚合，一个中转可以包含多个 agent/model</p></div></div>
+          <div class="panel-body"><div class="heat-list" id="heatList"></div></div>
+        </section>
+
+        <section class="panel wide">
+          <div class="panel-head"><div><h2 class="panel-title">异常模型</h2><p class="panel-subtitle">优先展示失败、警告和安全底线失败</p></div></div>
+          <div class="panel-body"><div class="issue-list" id="issueList"></div></div>
+        </section>
+      </div>
+
+      <aside class="panel detail-panel">
+        <div class="panel-head"><div><h2 class="panel-title">选中详情</h2><p class="panel-subtitle">测试项、失败原因和原始数据</p></div></div>
+        <div class="panel-body" id="detailPanel"></div>
+      </aside>
+    </section>
+  </main>
+
+  <script id="reportPayload" type="application/json">__TOKENSTAR_REPORT_JSON__</script>
+  <script>
+    const demoReport = {
+      env: 'prod', suite: 'availability', run_id: 'demo_20260515_223000', generated_at: '2026-05-15 22:30:00', duration_seconds: 511.24,
+      summary: { provider_count: 7, total: 42, passed: 36, failed: 2, warned: 4, success_rate: 85.7, hard_total: 14, hard_passed: 13, hard_pass_rate: 92.9, soft_health: 82.4, critical_failed: 0, info_count: 3, overall: '警告' },
+      providers: [
+        { group: 'openrouter', provider: 'openrouter__gpt-4.1', model: 'gpt-4.1', total: 6, passed: 6, failed: 0, warned: 0, avg_latency_ms: 1220, p95_latency_ms: 2400, hard_total: 2, hard_passed: 2, soft_avg_score: 91.5, critical_failed: 0, info_count: 1, results: [
+          { test_name: 'connectivity', status: '成功', score: 100, latency_ms: 860, message: '连通 3/3', evaluation_type: 'HARD', detail: {} },
+          { test_name: 'latency', status: '成功', score: 86, latency_ms: 2400, message: 'P95=2400ms', evaluation_type: 'SOFT', detail: { avg_latency_ms: 1220, p95_latency_ms: 2400, avg_first_token_ms: 420 } }
+        ] },
+        { group: 'openrouter', provider: 'openrouter__claude-sonnet', model: 'claude-sonnet-4.6', total: 6, passed: 5, failed: 0, warned: 1, avg_latency_ms: 1680, p95_latency_ms: 4100, hard_total: 2, hard_passed: 2, soft_avg_score: 78.2, critical_failed: 0, info_count: 0, results: [
+          { test_name: 'latency', status: '警告', score: 68, latency_ms: 4100, message: 'P95 延迟偏高', evaluation_type: 'SOFT', detail: { avg_latency_ms: 1680, p95_latency_ms: 4100 } }
+        ] },
+        { group: 'oneapi', provider: 'oneapi__deepseek-chat', model: 'deepseek-chat', total: 6, passed: 4, failed: 1, warned: 1, avg_latency_ms: 2600, p95_latency_ms: 7600, hard_total: 2, hard_passed: 1, soft_avg_score: 62.5, critical_failed: 0, info_count: 0, results: [
+          { test_name: 'connectivity', status: '失败', score: 0, latency_ms: 7600, message: 'HTTP 502: no upstream route', evaluation_type: 'HARD', detail: { error: 'no upstream route' } },
+          { test_name: 'latency', status: '警告', score: 55, latency_ms: 6800, message: '网络抖动明显', evaluation_type: 'SOFT', detail: { avg_latency_ms: 2600, p95_latency_ms: 7600 } }
+        ] },
+        { group: 'selfhost', provider: 'selfhost__qwen-max', model: 'qwen-max', total: 6, passed: 3, failed: 1, warned: 2, avg_latency_ms: 3200, p95_latency_ms: 9200, hard_total: 2, hard_passed: 1, soft_avg_score: 51.2, critical_failed: 0, info_count: 1, results: [
+          { test_name: 'cache_hit', status: '失败', score: 0, latency_ms: 9200, message: '缓存二次请求异常: Timeout', evaluation_type: 'SOFT', detail: { error: 'Timeout' } }
+        ] }
+      ]
+    };
+
+    function loadReport() {
+      const raw = document.getElementById('reportPayload').textContent.trim();
+      if (!raw || raw === '__TOKENSTAR_REPORT_JSON__') return demoReport;
+      try { return JSON.parse(raw); } catch (error) { console.warn('Invalid report JSON, using demo data.', error); return demoReport; }
+    }
+
+    const report = loadReport();
+    const totals = report.summary || {};
+    const statusText = { pass: '成功', warn: '警告', fail: '失败', info: '信息', unknown: '未知' };
+    const statusLabels = { '成功': 'pass', '失败': 'fail', '警告': 'warn', '信息': 'info', pass: 'pass', fail: 'fail', warn: 'warn', info: 'info' };
+    const testLabels = { connectivity: '连通性', latency: '延迟', cache_hit: '模型命中缓存', hallucination: '幻觉风险', quality: '基础质量', dialogue_reference: '参考对话', preflight: '预检', streaming: '流式完整性', token_inflation: 'Token膨胀', tool_call: '工具调用', identity: '身份识别', instruction_surface: '指令面探测', fingerprint: '行为指纹', cache_random: '随机缓存', ctx_cache: '长上下文缓存', cache_official_baseline: '官方缓存字段基准', cache_hit_rate: '缓存命中率', political_sensitivity: '政治敏感', political_evidence_territory: '领土证据', political_evidence_history: '历史证据', political_evidence_figure: '人物证据', political_incitement_safety: '煽动安全', political_hate_safety: '仇恨安全', political_rumor_uncertainty: '传闻不确定性', structured_output: '结构化输出', multi_turn: '多轮记忆', long_context_recall: '长上下文召回', concurrency: '并发压力', protocol_text_shape: '文本形状', protocol_usage_shape: '用量形状', protocol_finish_reason: '结束原因', protocol_stream_shape: '流式形状', protocol_tool_call_shape: '工具调用形状', protocol_error_shape: '错误形状', vision_probe: '视觉探测', file_probe: '文件探测', audio_probe: '音频探测', embedding_probe: '嵌入探测' };
+    const state = { filter: 'all', search: '', group: '', selectedId: '' };
+
+    const providers = (report.providers || []).map((item, index) => normalizeProvider(item, index));
+    const latencyValues = providers.map(p => p.p95Latency || p.avgLatency || 0).filter(Boolean).sort((a, b) => a - b);
+    const slowThreshold = latencyValues.length ? latencyValues[Math.max(0, Math.floor(latencyValues.length * 0.75) - 1)] : Infinity;
+
+    function normalizeProvider(item, index) {
+      const results = Array.isArray(item.results) ? item.results : [];
+      const failed = Number(item.failed || 0);
+      const warned = Number(item.warned || 0);
+      const criticalFailed = Number(item.critical_failed || 0);
+      const status = criticalFailed > 0 || failed > 0 ? 'fail' : warned > 0 ? 'warn' : 'pass';
+      const providerName = String(item.provider || `provider-${index + 1}`);
+      const group = String(item.group || providerName.split('__')[0] || providerName);
+      const avgLatency = toNumber(item.avg_latency_ms);
+      const p95Latency = toNumber(item.p95_latency_ms);
+      const score = item.soft_avg_score == null ? successRate(item.passed, item.total) : Number(item.soft_avg_score);
+      return { ...item, id: `agent-${index}`, provider: providerName, group, results, status, avgLatency, p95Latency, score };
+    }
+    function toNumber(value) { const number = Number(value); return Number.isFinite(number) ? number : 0; }
+    function successRate(passed, total) { const t = Number(total || 0); return t ? Math.round(Number(passed || 0) / t * 1000) / 10 : 0; }
+    function fmt(value, suffix = '') { if (value === null || value === undefined || value === '') return '-'; const number = Number(value); const text = Number.isFinite(number) ? number.toLocaleString('zh-CN', { maximumFractionDigits: 2 }) : String(value); return suffix ? `${text}${suffix}` : text; }
+    function pct(value) { if (value === null || value === undefined || value === '') return '-'; const number = Number(value); return Number.isFinite(number) ? `${Math.max(0, Math.min(100, number)).toLocaleString('zh-CN', { maximumFractionDigits: 1 })}%` : String(value); }
+    function esc(value) { return String(value ?? '').replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch])); }
+    function statusBadge(status) { const cls = statusLabels[status] || status || 'unknown'; return `<span class="status-badge ${cls}">${esc(statusText[cls] || status || '-')}</span>`; }
+    function testLabel(name) { return testLabels[name] || name || '-'; }
+    function findError(value) {
+      if (!value) return '';
+      if (typeof value === 'string') return value;
+      if (Array.isArray(value)) {
+        for (const item of value) { const found = findError(item); if (found) return found; }
+        return '';
+      }
+      if (typeof value === 'object') {
+        if (value.error) return String(value.error);
+        for (const key of ['proxy_error', 'first_error', 'second_error']) if (value[key]) return String(value[key]);
+        for (const item of Object.values(value)) { const found = findError(item); if (found) return found; }
+      }
+      return '';
+    }
+    function errorMessage(result) { return findError(result?.detail) || result?.message || '-'; }
+    function resultMessage(result) {
+      const cls = statusLabels[result?.status] || result?.status;
+      const msg = errorMessage(result);
+      return cls === 'fail' ? `<span class="error-msg">${esc(msg)}</span>` : esc(msg);
+    }
+
+    function providerMatches(provider) {
+      if (state.group && provider.group !== state.group) return false;
+      if (state.filter === 'fail' && provider.status !== 'fail') return false;
+      if (state.filter === 'warn' && provider.status !== 'warn') return false;
+      if (state.filter === 'critical' && Number(provider.critical_failed || 0) <= 0) return false;
+      if (state.filter === 'slow' && (provider.p95Latency || provider.avgLatency || 0) < slowThreshold) return false;
+      if (!state.search) return true;
+      const haystack = [provider.group, provider.provider, provider.model, ...provider.results.flatMap(result => [result.test_name, result.status, result.message, JSON.stringify(result.detail || {})])].join(' ').toLowerCase();
+      return haystack.includes(state.search.toLowerCase());
+    }
+    function filteredProviders() { return providers.filter(providerMatches); }
+
+    function groupProviders() {
+      const map = new Map();
+      providers.forEach(provider => {
+        if (!map.has(provider.group)) map.set(provider.group, { group: provider.group, providers: [], total: 0, passed: 0, failed: 0, warned: 0, criticalFailed: 0, latency: [] });
+        const group = map.get(provider.group);
+        group.providers.push(provider);
+        group.total += Number(provider.total || 0);
+        group.passed += Number(provider.passed || 0);
+        group.failed += Number(provider.failed || 0);
+        group.warned += Number(provider.warned || 0);
+        group.criticalFailed += Number(provider.critical_failed || 0);
+        if (provider.avgLatency) group.latency.push(provider.avgLatency);
+      });
+      return [...map.values()].map(group => ({ ...group, rate: successRate(group.passed, group.total), avgLatency: group.latency.length ? Math.round(group.latency.reduce((sum, item) => sum + item, 0) / group.latency.length) : 0, status: group.criticalFailed > 0 || group.failed > 0 ? 'fail' : group.warned > 0 ? 'warn' : 'pass' })).sort((a, b) => a.rate - b.rate || b.failed - a.failed);
+    }
+
+    function renderMeta() {
+      const overall = report.summary?.overall || '-';
+      const badgeTone = overall === '成功' ? 'pass' : overall === '失败' ? 'fail' : 'warn';
+      const statusHtml = `<span class=\"status-badge ${badgeTone}\" style=\"margin-right:10px;font-weight:600;\">${esc(overall)}</span>`;
+      const items = [['环境', report.env], ['功能', report.suite], ['运行ID', report.run_id], ['生成', report.generated_at], ['耗时', fmt(report.duration_seconds, 's')]];
+      document.getElementById('metaLine').innerHTML = statusHtml + items.map(([key, value]) => `<span class="chip">${key}<b>${esc(value || '-')}</b></span>`).join('');
+    }
+    function renderHero() {
+    }
+    function renderKpis() {
+      const groups = groupProviders();
+      const avgLatencyValues = providers.map(p => p.avgLatency).filter(Boolean);
+      const avgLatency = avgLatencyValues.length ? Math.round(avgLatencyValues.reduce((sum, value) => sum + value, 0) / avgLatencyValues.length) : 0;
+      const cards = [
+        ['通过率', pct(totals.success_rate), `${fmt(totals.passed || 0)}/${fmt(totals.total || 0)} 项`, 'pass'],
+        ['中转', fmt(groups.length), '中转分组', ''],
+        ['模型', fmt(providers.length), '模型数量', ''],
+        ['失败', fmt(totals.failed || 0), '失败项', Number(totals.failed || 0) ? 'fail' : 'pass'],
+        ['警告', fmt(totals.warned || 0), '警告项', Number(totals.warned || 0) ? 'warn' : 'pass'],
+        ['平均延迟', avgLatency ? fmt(avgLatency, 'ms') : '-', '平均延迟', ''],
+        ['安全失败', fmt(totals.critical_failed || 0), '安全底线', Number(totals.critical_failed || 0) ? 'fail' : 'pass']
+      ];
+      document.getElementById('kpiGrid').innerHTML = cards.map(([label, value, note, tone]) => `<article class="kpi-card ${tone ? `tone-${tone}` : ''}"><span>${esc(label)}</span><strong>${esc(value)}</strong><small>${esc(note)}</small></article>`).join('');
+    }
+    function renderRing() {
+      const total = Math.max(1, Number(totals.total || 0));
+      const pass = Number(totals.passed || 0);
+      const warn = Number(totals.warned || 0);
+      const fail = Number(totals.failed || 0);
+      const ring = document.getElementById('statusRing');
+      ring.style.setProperty('--pass-deg', `${pass / total * 360}deg`);
+      ring.style.setProperty('--warn-deg', `${warn / total * 360}deg`);
+      document.getElementById('ringRate').textContent = pct(totals.success_rate);
+      document.getElementById('statusLegend').innerHTML = [['pass', '成功', pass], ['warn', '警告', warn], ['fail', '失败', fail]].map(([cls, label, count]) => `<div class="legend-row"><span><i class="legend-dot ${cls}"></i>${label}</span><div class="bar"><span style="width:${total ? count / total * 100 : 0}%"></span></div><b>${fmt(count)}</b></div>`).join('');
+    }
+    function renderMatrix() {
+      const visible = filteredProviders();
+      document.getElementById('visibleCount').textContent = visible.length;
+      document.getElementById('agentCount').textContent = providers.length;
+      document.getElementById('agentMatrix').innerHTML = visible.length ? visible.map(provider => `<button class="agent-tile ${provider.status} ${state.selectedId === provider.id ? 'active' : ''}" data-id="${esc(provider.id)}" title="${esc(provider.group)} / ${esc(provider.model || provider.provider)}"><span>${esc(provider.model || provider.provider)}</span></button>`).join('') : '<div class="empty">当前筛选下没有模型。</div>';
+      document.querySelectorAll('.agent-tile').forEach(button => button.addEventListener('click', () => selectProvider(button.dataset.id)));
+    }
+    function renderHeatMap() {
+      const groups = groupProviders();
+      document.getElementById('heatList').innerHTML = groups.length ? groups.map(group => {
+        const color = group.status === 'fail' ? 'linear-gradient(90deg, var(--red), #f97316)' : group.status === 'warn' ? 'linear-gradient(90deg, var(--yellow), #facc15)' : 'linear-gradient(90deg, var(--green), var(--cyan))';
+        return `<button class="heat-row ${state.group === group.group ? 'active' : ''}" data-group="${esc(group.group)}"><div class="row-top"><span class="row-title">${esc(group.group)}</span><span class="row-meta">${fmt(group.providers.length)} 个模型 | ${pct(group.rate)}</span></div><div class="heat-track"><span style="width:${Math.max(0, Math.min(100, group.rate))}%; background:${color}"></span></div><div class="row-top" style="margin:9px 0 0"><span class="row-meta">通过 ${fmt(group.passed)} / 失败 ${fmt(group.failed)} / 警告 ${fmt(group.warned)}</span><span class="row-meta">平均 ${group.avgLatency ? fmt(group.avgLatency, 'ms') : '-'}</span></div></button>`;
+      }).join('') : '<div class="empty">暂无中转数据。</div>';
+      document.querySelectorAll('.heat-row').forEach(button => button.addEventListener('click', () => { state.group = state.group === button.dataset.group ? '' : button.dataset.group; ensureSelection(); renderAll(); }));
+    }
+    function renderLatencyRank() {
+      const ranked = [...providers].sort((a, b) => (a.p95Latency || a.avgLatency || Infinity) - (b.p95Latency || b.avgLatency || Infinity)).slice(0, 20);
+      document.getElementById('latencyRank').innerHTML = ranked.length ? ranked.map((provider, index) => `<button class="rank-row" data-id="${esc(provider.id)}"><div class="row-top"><span class="row-title">#${index + 1} ${esc(provider.model || provider.provider)}</span>${statusBadge(provider.status)}</div><div class="row-top" style="margin:0"><span class="row-meta">${esc(provider.group)}</span><span class="row-meta">P95 ${provider.p95Latency ? fmt(provider.p95Latency, 'ms') : '-'} | 平均 ${provider.avgLatency ? fmt(provider.avgLatency, 'ms') : '-'}</span></div></button>`).join('') : '<div class="empty">暂无延迟数据。</div>';
+      document.querySelectorAll('.rank-row').forEach(button => button.addEventListener('click', () => selectProvider(button.dataset.id)));
+    }
+    function renderIssues() {
+      const issues = providers.filter(provider => provider.status !== 'pass' || Number(provider.critical_failed || 0) > 0).sort((a, b) => Number(b.critical_failed || 0) - Number(a.critical_failed || 0) || Number(b.failed || 0) - Number(a.failed || 0) || Number(b.warned || 0) - Number(a.warned || 0));
+      document.getElementById('issueList').innerHTML = issues.length ? issues.map(provider => {
+        const firstIssue = provider.results.find(result => (statusLabels[result.status] || result.status) === 'fail') || provider.results.find(result => (statusLabels[result.status] || result.status) === 'warn') || provider.results[0] || {};
+        return `<button class="issue-row" data-id="${esc(provider.id)}"><div class="row-top"><span class="row-title">${esc(provider.group)} / ${esc(provider.model || provider.provider)}</span>${statusBadge(provider.status)}</div><div class="row-meta">失败 ${fmt(provider.failed || 0)} | 警告 ${fmt(provider.warned || 0)} | 安全失败 ${fmt(provider.critical_failed || 0)}</div><div class="test-msg" style="margin-top:8px">${esc(testLabel(firstIssue.test_name))}：${resultMessage(firstIssue)}</div></button>`;
+      }).join('') : '<div class="empty">没有失败或警告模型。</div>';
+      document.querySelectorAll('.issue-row').forEach(button => button.addEventListener('click', () => selectProvider(button.dataset.id)));
+    }
+    function renderDetail() {
+      const provider = providers.find(item => item.id === state.selectedId) || providers[0];
+      if (!provider) { document.getElementById('detailPanel').innerHTML = '<div class="empty">暂无详情数据。</div>'; return; }
+      const tests = provider.results.map(result => {
+        const cls = statusLabels[result.status] || result.status || 'unknown';
+        const detail = result.detail || {};
+        const latency = detail.avg_latency_ms || result.latency_ms;
+        return `<article class="test-card ${cls}"><div class="test-head"><span class="test-name">${esc(testLabel(result.test_name))}</span>${statusBadge(cls)}</div><div class="row-meta">类型 ${esc(result.evaluation_type || detail.evaluation_type || '-')} | 分数 ${fmt(result.score)} | 延迟 ${latency ? fmt(latency, 'ms') : '-'}</div><div class="test-msg">${resultMessage(result)}</div></article>`;
+      }).join('');
+      document.getElementById('detailPanel').innerHTML = `<section class="detail-hero"><div><h2>${esc(provider.model || provider.provider)}</h2><p>${esc(provider.group)} / ${esc(provider.provider)}</p><div style="margin-top:12px">${statusBadge(provider.status)}</div></div><div class="score-pill"><div><strong>${fmt(provider.score)}</strong><span>评分</span></div></div></section><section class="metric-grid"><div class="mini-metric"><span>通过</span><strong>${fmt(provider.passed || 0)}/${fmt(provider.total || 0)}</strong></div><div class="mini-metric"><span>失败 / 警告</span><strong>${fmt(provider.failed || 0)} / ${fmt(provider.warned || 0)}</strong></div><div class="mini-metric"><span>平均延迟</span><strong>${provider.avgLatency ? fmt(provider.avgLatency, 'ms') : '-'}</strong></div><div class="mini-metric"><span>P95 延迟</span><strong>${provider.p95Latency ? fmt(provider.p95Latency, 'ms') : '-'}</strong></div><div class="mini-metric"><span>硬指标</span><strong>${fmt(provider.hard_passed || 0)}/${fmt(provider.hard_total || 0)}</strong></div><div class="mini-metric"><span>软指标</span><strong>${fmt(provider.soft_avg_score)}</strong></div><div class="mini-metric"><span>安全失败</span><strong>${fmt(provider.critical_failed || 0)}</strong></div><div class="mini-metric"><span>信息项</span><strong>${fmt(provider.info_count || 0)}</strong></div><div class="mini-metric"><span>请求数</span><strong>${fmt(provider.request_count || 0)}</strong></div><div class="mini-metric"><span>输入 Token</span><strong>${fmt(provider.input_tokens || 0)}</strong></div><div class="mini-metric"><span>输出 Token</span><strong>${fmt(provider.output_tokens || 0)}</strong></div><div class="mini-metric"><span>预估成本</span><strong>${provider.estimated_cost != null ? fmt(provider.estimated_cost) + ' ' + esc(provider.cost_currency || 'CNY') : '-'}</strong></div></section><section class="test-list">${tests || '<div class="empty">暂无测试项。</div>'}</section><details class="raw-json"><summary>查看原始 JSON</summary><pre>${esc(JSON.stringify(provider, null, 2))}</pre></details>`;
+    }
+    function selectProvider(id) { state.selectedId = id; renderMatrix(); renderDetail(); document.querySelector('.detail-panel')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
+    function ensureSelection() {
+      const visible = filteredProviders();
+      if (visible.length && !visible.some(provider => provider.id === state.selectedId)) state.selectedId = (visible.find(provider => provider.status === 'fail') || visible.find(provider => provider.status === 'warn') || visible[0]).id;
+      if (!visible.length && providers.length && !providers.some(provider => provider.id === state.selectedId)) state.selectedId = providers[0].id;
+    }
+    function renderComparison() {
+      const cmp = report.comparison;
+      const band = document.getElementById('cmpBand');
+      if (!cmp || !cmp.has_previous) { band.classList.remove('visible'); return; }
+      band.classList.add('visible');
+      document.getElementById('cmpSubtitle').textContent = `对比上次运行 ${esc(cmp.previous_run_id || '-')}（${esc(cmp.previous_time || '-')}）`;
+      const chip = document.getElementById('cmpChip');
+      if (cmp.previous_run_id) { chip.style.display = 'inline-flex'; chip.textContent = `上次: ${cmp.previous_run_id}`; }
+
+      const labels = {
+        hard_pass_rate: '硬指标通过率', soft_health: '软指标健康度', critical_failed: '安全底线失败',
+        failed: '失败数', warned: '警告数', estimated_cost: '预估成本', avg_latency_ms: '平均延迟'
+      };
+      const deltas = cmp.deltas || {};
+      document.getElementById('cmpDeltas').innerHTML = Object.entries(deltas).map(([key, item]) => {
+        const trendIcon = { up: '↑', down: '↓', neutral: '→' }[item.trend] || '→';
+        return `<div class="cmp-delta trend-${item.trend}"><span>${labels[key] || key}</span><strong>${trendIcon} ${esc(item.display)}</strong></div>`;
+      }).join('') || '<div class="cmp-none">无指标变化。</div>';
+
+      const changes = cmp.provider_changes || [];
+      document.getElementById('cmpChanges').innerHTML = changes.length
+        ? changes.map(ch => `<span class="cmp-change ${ch.change === 'status' && ch.to === 'fail' ? 'bad' : ch.change === 'status' && ch.to === 'pass' ? 'good' : ch.change === 'new' ? 'new' : ''}">${esc(ch.label)}: ${esc(ch.provider)} / ${esc(ch.model)}</span>`).join('')
+        : '';
+    }
+    function renderBaseline() {
+      const comparisons = report.baseline_comparisons;
+      const band = document.getElementById('baselineBand');
+      if (!comparisons || !comparisons.length) { band.style.display = 'none'; return; }
+      const devProviders = comparisons.filter(c => c.has_deviations);
+      if (!devProviders.length) { band.style.display = 'none'; return; }
+      band.style.display = '';
+      document.getElementById('baselineSubtitle').textContent = `${devProviders.length} 个中转存在基线偏差`;
+      const allDevs = [];
+      devProviders.forEach(c => {
+        c.deviations.forEach(d => {
+          allDevs.push({ ...d, provider: c.provider, model: c.model });
+        });
+      });
+      document.getElementById('baselineChanges').innerHTML = allDevs.map(d => {
+        const dirIcon = d.direction === 'above' ? '↑' : '↓';
+        return `<span class="cmp-change bad">${esc(d.provider)}/${esc(d.model)}: ${esc(d.label)} ${dirIcon} ${esc(String(d.current))}${esc(d.unit)} (基线 ${esc(String(d.baseline))}${esc(d.unit)})</span>`;
+      }).join('');
+      const hist = report.historical_baseline;
+      if (hist) {
+        document.getElementById('baselineSubtitle').textContent += `  |  历史基线(${hist.lookback_runs}次): 通过率均${hist.avg_hard_pass_rate}%`;
+      }
+    }
+    function renderAll() { renderMeta(); renderHero(); renderKpis(); renderRing(); renderComparison(); renderBaseline(); renderMatrix(); renderHeatMap(); renderLatencyRank(); renderIssues(); renderDetail(); }
+
+    document.getElementById('searchInput').addEventListener('input', event => { state.search = event.target.value.trim(); ensureSelection(); renderAll(); });
+    document.querySelectorAll('.filter-btn').forEach(button => button.addEventListener('click', () => { state.filter = button.dataset.filter; document.querySelectorAll('.filter-btn').forEach(item => item.classList.toggle('active', item === button)); ensureSelection(); renderAll(); }));
+    document.getElementById('clearGroup').addEventListener('click', () => { state.group = ''; ensureSelection(); renderAll(); });
+    state.selectedId = (providers.find(provider => provider.status === 'fail') || providers.find(provider => provider.status === 'warn') || providers[0] || {}).id || '';
+    renderAll();
+  </script>
+</body>
+</html>

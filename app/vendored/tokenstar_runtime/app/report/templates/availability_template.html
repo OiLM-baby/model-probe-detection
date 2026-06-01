@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TokenStar 日常可用性巡检</title>
+  <style>
+    :root {
+      --bg: #eef4ff;
+      --panel: #ffffff;
+      --soft: #f8fafc;
+      --line: #dbe4ef;
+      --line-strong: #cbd5e1;
+      --text: #0f172a;
+      --muted: #64748b;
+      --pass: #059669;
+      --pass-bg: #ecfdf5;
+      --fail: #dc2626;
+      --fail-bg: #fff1f2;
+      --warn: #d97706;
+      --warn-bg: #fffbeb;
+      --blue: #2563eb;
+      --blue-bg: #eff6ff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 8% -12%, rgba(37, 99, 235, 0.16), transparent 28rem),
+        radial-gradient(circle at 100% 0%, rgba(14, 165, 233, 0.14), transparent 30rem),
+        linear-gradient(135deg, #f8fafc, var(--bg));
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+    main { max-width: 1320px; margin: 0 auto; padding: 28px 20px 44px; }
+    .hero {
+      margin-bottom: 16px;
+      padding: 24px 26px;
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      border-radius: 22px;
+      background: rgba(255, 255, 255, 0.9);
+      box-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
+      backdrop-filter: blur(14px);
+    }
+    h1 { margin: 0 0 8px; font-size: 32px; line-height: 1.1; letter-spacing: -0.04em; }
+    .subtitle { margin: 0; color: var(--muted); line-height: 1.7; }
+    .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+    .meta span {
+      display: inline-flex;
+      gap: 6px;
+      align-items: center;
+      min-height: 30px;
+      padding: 6px 10px;
+      border: 1px solid rgba(148, 163, 184, 0.26);
+      border-radius: 999px;
+      background: #f8fafc;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .meta b { color: var(--text); }
+    .summary {
+      margin: 0 0 16px;
+      padding: 14px 16px;
+      border: 1px solid rgba(37, 99, 235, 0.18);
+      border-radius: 16px;
+      background: linear-gradient(180deg, #ffffff, #f8fbff);
+      color: #334155;
+      box-shadow: 0 12px 32px rgba(37, 99, 235, 0.08);
+      line-height: 1.65;
+    }
+    .baseline-cards {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 10px;
+      margin: 0 0 16px;
+    }
+    .baseline-card {
+      min-height: 82px;
+      padding: 12px 14px;
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.9);
+      box-shadow: 0 10px 26px rgba(15, 23, 42, 0.06);
+    }
+    .baseline-card span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .baseline-card strong {
+      display: block;
+      margin-top: 8px;
+      color: var(--text);
+      font-size: 18px;
+      line-height: 1.2;
+      word-break: break-word;
+    }
+    .comparison {
+      display: none;
+      margin: 0 0 16px;
+      padding: 14px 16px;
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.92);
+      box-shadow: 0 12px 32px rgba(15, 23, 42, 0.06);
+    }
+    .comparison.visible { display: block; }
+    .comparison h2 {
+      margin: 0 0 4px;
+      color: #1e293b;
+      font-size: 16px;
+      line-height: 1.35;
+    }
+    .comparison p {
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+    .comparison-items {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .comparison-chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 30px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: #f8fafc;
+      color: #334155;
+      font-size: 13px;
+      font-weight: 760;
+      white-space: nowrap;
+    }
+    .comparison-chip.up { color: var(--pass); background: var(--pass-bg); border-color: rgba(5, 150, 105, 0.18); }
+    .comparison-chip.down { color: var(--fail); background: var(--fail-bg); border-color: rgba(220, 38, 38, 0.18); }
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin: 0 0 12px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+    .tab {
+      flex: 0 0 auto;
+      min-height: 36px;
+      border: 1px solid rgba(148, 163, 184, 0.32);
+      border-radius: 999px;
+      padding: 8px 14px;
+      color: #475569;
+      background: rgba(255, 255, 255, 0.86);
+      font: inherit;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .tab.active {
+      border-color: rgba(37, 99, 235, 0.42);
+      color: #1d4ed8;
+      background: var(--blue-bg);
+      font-weight: 800;
+    }
+    .table-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin: 0 0 10px;
+      color: #334155;
+      font-size: 14px;
+    }
+    .table-title strong { color: var(--text); }
+    .table-title span { color: var(--muted); }
+    .table-wrap {
+      overflow: auto;
+      max-height: 70vh;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--panel);
+      box-shadow: 0 18px 48px rgba(15, 23, 42, 0.08);
+    }
+    table { width: 100%; min-width: 1280px; border-collapse: separate; border-spacing: 0; }
+    th, td { padding: 13px 14px; border-bottom: 1px solid #edf2f7; text-align: left; vertical-align: middle; font-size: 14px; }
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      color: #475569;
+      background: linear-gradient(180deg, #f8fafc, #eef4ff);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      box-shadow: inset 0 -1px 0 var(--line-strong);
+    }
+    tbody tr { transition: background 0.14s ease; }
+    tbody tr:hover { background: #f8fbff; }
+    tbody tr:last-child td { border-bottom: none; }
+    .relay { width: 150px; font-weight: 800; color: #1e293b; white-space: nowrap; }
+    .model {
+      width: 280px;
+      color: #0f172a;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      white-space: nowrap;
+    }
+    .status { white-space: nowrap; }
+    .first-token {
+      width: 110px;
+      color: #334155;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    .reason-summary { min-width: 120px; white-space: nowrap; font-weight: 760; }
+    .reason-detail {
+      min-width: 320px;
+      max-width: 520px;
+      color: #334155;
+      line-height: 1.55;
+      white-space: normal;
+      word-break: break-word;
+    }
+    .mark {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      margin-right: 6px;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 900;
+      vertical-align: middle;
+    }
+    .ok .mark { color: var(--pass); background: var(--pass-bg); }
+    .bad .mark { color: var(--fail); background: var(--fail-bg); }
+    .warn .mark { color: var(--warn); background: var(--warn-bg); }
+    .empty .mark { color: var(--muted); background: #f1f5f9; }
+    .ok { color: var(--pass); font-weight: 760; }
+    .bad { color: var(--fail); font-weight: 760; }
+    .warn { color: var(--warn); font-weight: 760; }
+    .empty { color: var(--muted); }
+    .msg { color: #334155; font-weight: 500; }
+    .error-msg { color: var(--fail); font-weight: 650; }
+    .foot {
+      margin: 14px 2px 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.65;
+    }
+    details { margin-top: 16px; }
+    summary { cursor: pointer; color: #334155; font-size: 13px; }
+    pre {
+      max-height: 360px;
+      overflow: auto;
+      margin: 10px 0 0;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #ffffff;
+      font-size: 12px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    @media (max-width: 720px) {
+      main { padding: 18px 12px 32px; }
+      .hero { padding: 20px; border-radius: 18px; }
+      h1 { font-size: 26px; }
+      th, td { padding: 11px 10px; }
+      .baseline-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      table { min-width: 920px; }
+      .reason-detail { max-width: 260px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="hero">
+      <h1>日常可用性巡检</h1>
+      <p class="subtitle">只看日常链路：API 联通、首 Token、延迟 P95。按中转和模型展开。</p>
+      <div class="meta" id="meta"></div>
+    </section>
+
+    <p class="summary" id="summaryText">正在加载报告数据...</p>
+    <section class="baseline-cards" id="baselineCards"></section>
+    <section class="comparison" id="comparisonBox">
+      <h2>历史对比</h2>
+      <p id="comparisonMeta"></p>
+      <div class="comparison-items" id="comparisonItems"></div>
+    </section>
+
+    <div class="tabs" id="tabs"></div>
+    <div class="table-title" id="tableTitle"></div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>中转</th>
+            <th>模型</th>
+            <th>是否联通</th>
+            <th>首 Token</th>
+            <th>延迟是否达标</th>
+            <th>失败原因总结</th>
+            <th>失败原因</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+
+    <p class="foot">说明：是否联通只表示 API 是否成功返回；latency 按 P95 判断是否达标；失败原因总结来自后端映射，失败原因保留原始错误。</p>
+    <details>
+      <summary>查看原始 JSON</summary>
+      <pre id="rawJson"></pre>
+    </details>
+  </main>
+
+  <script id="reportPayload" type="application/json">__TOKENSTAR_REPORT_JSON__</script>
+  <script>
+    function loadReport(){const raw=document.getElementById('reportPayload').textContent.trim();if(!raw||raw==='__TOKENSTAR_REPORT_JSON__')return {summary:{},providers:[]};return JSON.parse(raw);}
+    const report=loadReport();
+    const providers=(report.providers||[]).map(normalizeProvider);
+    const groups=groupProviders();
+    const activeGroupKey=`tokenstar:availability:activeGroup:${report.run_id||report.suite||'latest'}`;
+    let activeGroup=initialActiveGroup();
+    const statusMap={'成功':'pass','失败':'fail','警告':'warn','信息':'info',pass:'pass',fail:'fail',warn:'warn',info:'info'};
+
+    function esc(value){return String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
+    function fmt(value,suffix=''){if(value===null||value===undefined||value==='')return '-';const n=Number(value);const text=Number.isFinite(n)?n.toLocaleString('zh-CN',{maximumFractionDigits:0}):String(value);return suffix?`${text}${suffix}`:text;}
+    function normalizeProvider(item){const results=Array.isArray(item.results)?item.results:[];const connectivity=findResult(results,'connectivity');const latency=findResult(results,'daily_latency')||findResult(results,'latency');const latencyDetail=(latency&&latency.detail)||item.latency_detail||{};return {...item,group:String(item.group||item.provider||'-'),connectivity,latency,latencyDetail};}
+    function groupProviders(){const map=new Map();providers.forEach(provider=>{if(!map.has(provider.group))map.set(provider.group,[]);map.get(provider.group).push(provider);});return [...map.entries()].map(([name,items])=>({name,items}));}
+    function initialActiveGroup(){try{const saved=localStorage.getItem(activeGroupKey);if(saved&&groups.some(group=>group.name===saved))return saved;}catch(e){}return groups[0]?.name||'';}
+    function activeProviders(){const group=groups.find(item=>item.name===activeGroup);return group?group.items:providers;}
+    function findResult(results,name){return results.find(result=>result.test_name===name);}
+    function clsFor(result){const cls=statusMap[result?.status]||result?.status||'';if(cls==='pass')return 'ok';if(cls==='warn')return 'warn';if(cls==='fail')return 'bad';return 'empty';}
+    function markFor(result){const cls=statusMap[result?.status]||result?.status||'';if(cls==='pass')return '✓';if(cls==='warn')return '△';if(cls==='fail')return '✕';return '-';}
+    function shortMessage(result){if(!result)return '';const msg=String(result.message||'');return msg.replace(/^连通\s*/,'').replace(/^P50=[^，,]+[，,]\s*/,'').trim();}
+    function findError(value){if(!value)return '';if(typeof value==='string')return value;if(Array.isArray(value)){for(const item of value){const found=findError(item);if(found)return found;}return '';}if(typeof value==='object'){for(const key of ['error','error_message','error_msg','proxy_error','first_error','second_error']){if(value[key])return String(value[key]);}for(const key of ['errors','attempts']){const found=findError(value[key]);if(found)return found;}}return '';}
+    function errorMessage(result){return findError(result?.detail)||shortMessage(result);}
+    function statusCell(result,message){const cls=clsFor(result);const mark=markFor(result);const msgClass=cls==='bad'?'error-msg':'msg';return `<span class="${cls}"><span class="mark">${mark}</span><span class="${msgClass}">${esc(message||'')}</span></span>`;}
+    function isPass(result){return (statusMap[result?.status]||result?.status)==='pass';}
+    function isConnectivityPass(provider){return Boolean(provider.connectivity)&&isPass(provider.connectivity);}
+    function failedResult(provider){if(provider.connectivity&&!isPass(provider.connectivity))return provider.connectivity;if(provider.latency&&!isPass(provider.latency))return provider.latency;return null;}
+    function failureReason(provider){const result=failedResult(provider);return result?.error_detail||errorMessage(result)||'';}
+    function reasonSummary(provider){const result=failedResult(provider);return result?.error_category||'无错误';}
+	    function truncate(value,limit=120){const text=String(value||'');return text.length>limit?`${text.slice(0,limit)}...`:text;}
+	    function connectivityCell(provider){const result=provider.connectivity;if(!result)return statusCell(null,'未执行');return statusCell(result,isPass(result)?'是':'否');}
+	    function latencyCell(provider){if(!isConnectivityPass(provider))return statusCell(null,'跳过');const result=provider.latency;const detail=provider.latencyDetail||{};if(!result)return statusCell(null,'跳过');const value=detail.avg_latency_ms||detail.p95_latency_ms||provider.avg_latency_ms||provider.p95_latency_ms||result.latency_ms;const msg=isPass(result)?(value?`达标 ${fmt(value,'ms')}`:'达标'):(value?`不达标 ${fmt(value,'ms')}`:'不达标');return statusCell(result,msg);}
+	    function firstTokenCell(provider){if(!isConnectivityPass(provider)||!provider.latency)return '<span class="empty">未执行</span>';const ttft=provider.avg_first_token_ms??provider.latencyDetail?.avg_first_token_ms;if(ttft===null||ttft===undefined||ttft==='')return '<span class="empty">未采集</span>';return `<span class="msg">${esc(fmt(ttft,'ms'))}</span>`;}
+	    function reasonSummaryCell(provider){const result=failedResult(provider);return `<span class="${clsFor(result)}">${esc(reasonSummary(provider))}</span>`;}
+	    function failureReasonCell(provider){const reason=failureReason(provider);return reason?`<span title="${esc(reason)}">${esc(truncate(reason))}</span>`:'-';}
+    function hasValue(value){return value!==null&&value!==undefined&&value!=='';}
+    function hasBaselineConfig(config){if(!config)return false;return ['p95_latency_max_ms','avg_latency_max_ms','hard_pass_rate_min_pct','soft_score_min','max_cost_per_request'].some(key=>config[key]!==null&&config[key]!==undefined&&config[key]!=='');}
+    function renderMeta(){document.getElementById('meta').innerHTML=[['环境',report.env],['suite',report.suite],['run',report.run_id],['生成',report.generated_at],['耗时',fmt(report.duration_seconds,'s')]].map(([key,value])=>`<span>${esc(key)} <b>${esc(value||'-')}</b></span>`).join('');}
+    function renderBaselineCards(){const box=document.getElementById('baselineCards');const base=report.baseline_config;if(!hasBaselineConfig(base)){box.innerHTML='<article class="baseline-card"><span>基准配置</span><strong>暂无基准配置</strong></article>';return;}const cards=[['基准来源',base.source||'-'],['套件基准',base.suite||report.suite||'-'],['P95 延迟上限',hasValue(base.p95_latency_max_ms)?fmt(base.p95_latency_max_ms,'ms'):'-'],['平均延迟上限',hasValue(base.avg_latency_max_ms)?fmt(base.avg_latency_max_ms,'ms'):'-'],['硬指标通过率下限',hasValue(base.hard_pass_rate_min_pct)?`${fmt(base.hard_pass_rate_min_pct)}%`:'-'],['偏差允许范围',hasValue(base.deviation_allowed_pct)?`${fmt(base.deviation_allowed_pct)}%`:'-']];box.innerHTML=cards.map(([label,value])=>`<article class="baseline-card"><span>${esc(label)}</span><strong>${esc(value)}</strong></article>`).join('');}
+    function providerGroupName(providerName){const text=String(providerName||'');if(text.startsWith('clawos-token-gateway'))return 'clawos';if(text.includes('__'))return text.split('__')[0].replace(/_openai_key_[a-z0-9]+$/i,'').replace(/_claude_op$/i,'');return text;}
+    function renderComparison(){const box=document.getElementById('comparisonBox');const cmp=report.comparison;if(!cmp||!cmp.has_previous){box.classList.remove('visible');return;}box.classList.add('visible');document.getElementById('comparisonMeta').textContent=`对比上次运行 ${cmp.previous_run_id||'-'}（${cmp.previous_time||'-'}）`;const labels={failed:'失败数',warned:'警告数',critical_failed:'安全底线失败',avg_latency_ms:'平均延迟',estimated_cost:'预估成本'};const deltas=cmp.deltas||{};const chips=Object.keys(labels).filter(key=>deltas[key]).map(key=>{const item=deltas[key];const trend=item.trend||'neutral';return `<span class="comparison-chip ${esc(trend)}">${esc(labels[key])}: ${esc(item.display??item.value??'-')}</span>`;});const visibleChanges=(cmp.provider_changes||[]).filter(item=>!activeGroup||providerGroupName(item.provider)===activeGroup).slice(0,6);const changes=visibleChanges.map(item=>`<span class="comparison-chip ${item.change==='status'&&item.to==='fail'?'down':item.change==='status'&&item.to==='pass'?'up':''}">${esc(item.provider||'-')}/${esc(item.model||'-')}: ${esc(item.label||item.change||'-')}</span>`);document.getElementById('comparisonItems').innerHTML=chips.concat(changes).join('')||'<span class="comparison-chip">无明显变化</span>';}
+    function renderTabs(){document.getElementById('tabs').innerHTML=groups.map(group=>`<button class="tab ${group.name===activeGroup?'active':''}" data-group="${esc(group.name)}">${esc(group.name)} <b>${fmt(group.items.length)}</b></button>`).join('');document.querySelectorAll('.tab').forEach(button=>button.addEventListener('click',()=>{activeGroup=button.dataset.group;try{localStorage.setItem(activeGroupKey,activeGroup);}catch(e){}renderTabs();renderRows();renderTableTitle();renderComparison();}));}
+    function renderTableTitle(){const items=activeProviders();const connectivityOk=items.filter(isConnectivityPass).length;const latencyOk=items.filter(provider=>isConnectivityPass(provider)&&(statusMap[provider.latency?.status]||provider.latency?.status)==='pass').length;document.getElementById('tableTitle').innerHTML=`<strong>${esc(activeGroup||'全部中转')}</strong><span>${fmt(items.length)} 个模型，连通 ${fmt(connectivityOk)}/${fmt(items.length)}，延迟 ${fmt(latencyOk)}/${fmt(items.length)}</span>`;}
+	    function renderRows(){document.getElementById('rows').innerHTML=activeProviders().map(provider=>`<tr><td class="relay">${esc(provider.group)}</td><td class="model">${esc(provider.model||provider.provider)}</td><td class="status">${connectivityCell(provider)}</td><td class="first-token">${firstTokenCell(provider)}</td><td class="status">${latencyCell(provider)}</td><td class="reason-summary">${reasonSummaryCell(provider)}</td><td class="reason-detail">${failureReasonCell(provider)}</td></tr>`).join('')||'<tr><td colspan="7" class="empty">暂无巡检数据</td></tr>';}
+    function renderSummary(){const total=providers.length;const connectivityOk=providers.filter(isConnectivityPass).length;const latencyOk=providers.filter(provider=>isConnectivityPass(provider)&&(statusMap[provider.latency?.status]||provider.latency?.status)==='pass').length;const skipped=providers.filter(provider=>!isConnectivityPass(provider)||!provider.latency).length;const best=providers.filter(provider=>isConnectivityPass(provider)&&(statusMap[provider.latency?.status]||provider.latency?.status)==='pass').sort((a,b)=>(a.latencyDetail.avg_latency_ms||a.latencyDetail.p95_latency_ms||a.avg_latency_ms||999999)-(b.latencyDetail.avg_latency_ms||b.latencyDetail.p95_latency_ms||b.avg_latency_ms||999999))[0];const parts=[`${fmt(groups.length)} 个中转`, `${fmt(total)} 个模型`, `连通性通过 ${fmt(connectivityOk)}/${fmt(total)}`, `延迟达标 ${fmt(latencyOk)}/${fmt(total)}`];if(skipped)parts.push(`${fmt(skipped)} 个跳过延迟`);if(best)parts.push(`最快达标 ${best.group}/${best.model} ${fmt(best.latencyDetail.avg_latency_ms||best.latencyDetail.p95_latency_ms||best.avg_latency_ms,'ms')}`);document.getElementById('summaryText').textContent=parts.join('，')+'。';}
+    function render(){document.getElementById('rawJson').textContent=JSON.stringify(report,null,2);renderMeta();renderBaselineCards();renderComparison();renderTabs();renderRows();renderTableTitle();renderSummary();}
+    render();
+  </script>
+</body>
+</html>
