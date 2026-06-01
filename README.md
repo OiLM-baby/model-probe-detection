@@ -55,9 +55,6 @@ data/detection_runs.json
 | `MODEL_TOOL_HOST` | 后端监听地址 | `0.0.0.0` |
 | `MODEL_TOOL_PORT` | 后端监听端口 | `8090` |
 | `MODEL_TOOL_SKIP_FRONTEND_BUILD` | 启动时跳过前端构建 | 空 |
-| `API_TEST_TOKENSTAR_ROOT` | 覆盖 TokenStar runtime 路径 | `app/vendored/tokenstar_runtime` |
-| `API_TEST_TOKENSTAR_CONFIG` | 覆盖 TokenStar providers.yaml | `config/tokenstar/providers.yaml` |
-| `API_TEST_TOKENSTAR_BASELINES` | 覆盖 TokenStar baselines.yaml | `config/tokenstar/baselines.yaml` |
 
 ## 页面
 

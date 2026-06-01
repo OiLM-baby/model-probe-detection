@@ -22,19 +22,15 @@ from app.storage import json_store
 router = APIRouter(tags=["detection"])
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-TOKENSTAR_RUNTIME_ROOT = Path(
-    os.getenv("API_TEST_TOKENSTAR_ROOT", PROJECT_ROOT / "app" / "vendored" / "tokenstar_runtime")
-).resolve()
+TOKENSTAR_RUNTIME_ROOT = (PROJECT_ROOT / "app" / "vendored" / "tokenstar_runtime").resolve()
 TOKENSTAR_RUNNER = TOKENSTAR_RUNTIME_ROOT / "run.py"
-TOKENSTAR_CONFIG = Path(os.getenv("API_TEST_TOKENSTAR_CONFIG", PROJECT_ROOT / "config" / "tokenstar" / "providers.yaml"))
-TOKENSTAR_BASELINES_CONFIG = Path(
-    os.getenv("API_TEST_TOKENSTAR_BASELINES", PROJECT_ROOT / "config" / "tokenstar" / "baselines.yaml")
-)
-TOKENSTAR_LOG_DIR = Path(os.getenv("API_TEST_TOKENSTAR_LOG_DIR", PROJECT_ROOT / "log" / "tokenstar"))
-TOKENSTAR_DATA_DIR = Path(os.getenv("API_TEST_TOKENSTAR_DATA_DIR", PROJECT_ROOT / "data" / "tokenstar"))
+TOKENSTAR_CONFIG = PROJECT_ROOT / "config" / "tokenstar" / "providers.yaml"
+TOKENSTAR_BASELINES_CONFIG = PROJECT_ROOT / "config" / "tokenstar" / "baselines.yaml"
+TOKENSTAR_LOG_DIR = PROJECT_ROOT / "log" / "tokenstar"
+TOKENSTAR_DATA_DIR = PROJECT_ROOT / "data" / "tokenstar"
 TOKENSTAR_REPORT_DIR = TOKENSTAR_DATA_DIR / "reports"
 TOKENSTAR_HISTORY_DB = TOKENSTAR_DATA_DIR / "history" / "history.db"
-TOKENSTAR_PYTHON = Path(os.getenv("API_TEST_TOKENSTAR_PYTHON", TOKENSTAR_RUNTIME_ROOT / ".venv" / "bin" / "python"))
+TOKENSTAR_PYTHON = TOKENSTAR_RUNTIME_ROOT / ".venv" / "bin" / "python"
 CACHE_CONFIDENCE_TESTS = ("cache_hit_rate", "cache_hit")
 
 STATUS_TO_UI = {
