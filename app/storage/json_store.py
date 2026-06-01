@@ -64,19 +64,22 @@ def get_config(config_id: str) -> dict[str, Any] | None:
     return None
 
 
-def list_probe_runs(config_id: str = "", limit: int = 20) -> list[dict[str, Any]]:
+def list_probe_runs(config_id: str = "", limit: int = 20, probe_type: str = "") -> list[dict[str, Any]]:
     rows = _read_list(PROBE_RUNS_FILE)
     if config_id:
         rows = [row for row in rows if row.get("config_id") == config_id]
+    if probe_type:
+        rows = [row for row in rows if (row.get("probe_type") or "chat") == probe_type]
     return rows[:limit]
 
 
-def create_probe_run(config_id: str, base_url: str, api_format: str, total: int) -> dict[str, Any]:
+def create_probe_run(config_id: str, base_url: str, api_format: str, total: int, probe_type: str = "chat") -> dict[str, Any]:
     run = {
         "id": new_id(),
         "config_id": config_id or "",
         "base_url": base_url,
         "api_format": api_format,
+        "probe_type": probe_type or "chat",
         "total": total,
         "passed": 0,
         "created_at": now_text(),

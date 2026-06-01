@@ -12,6 +12,12 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from app.core.error_category import classify_error
+from app.core.multimodal_probe import (
+    default_models_for,
+    is_likely_non_chat_model,
+    probe_multimodal,
+    skipped_chat_result,
+)
 from app.storage import json_store
 from app.vendored.llm_client import LLMClient
 
@@ -35,6 +41,7 @@ class ProbeRunRequest(BaseModel):
     base_url: str
     api_key: str = ""
     api_format: str = "openai"
+    probe_type: str = "chat"
     models: list[str] = []
 
 
@@ -59,14 +66,15 @@ def delete_config(config_id: str) -> dict[str, Any]:
 
 
 @router.get("/api/probe/runs")
-def list_runs(config_id: str = "", limit: int = 20) -> list[dict[str, Any]]:
-    rows = json_store.list_probe_runs(config_id=config_id, limit=limit)
+def list_runs(config_id: str = "", limit: int = 20, probe_type: str = "") -> list[dict[str, Any]]:
+    rows = json_store.list_probe_runs(config_id=config_id, limit=limit, probe_type=probe_type)
     return [
         {
             "id": row["id"],
             "config_id": row.get("config_id") or "",
             "base_url": row.get("base_url") or "",
             "api_format": row.get("api_format") or "openai",
+            "probe_type": row.get("probe_type") or "chat",
             "total": row.get("total") or 0,
             "passed": row.get("passed") or 0,
             "created_at": row.get("created_at") or "",
@@ -91,6 +99,9 @@ def get_run_results(run_id: str) -> list[dict[str, Any]]:
 
 
 def _probe_one(base_url: str, api_key: str, api_format: str, model: str) -> dict[str, Any]:
+    if is_likely_non_chat_model(model):
+        return skipped_chat_result(model)
+
     client = LLMClient(base_url=base_url, api_key=api_key, model=model, api_format=api_format, timeout=30)
     try:
         text, latency_ms, first_token_ms, chars_per_second, error = client.chat_stream_metrics(
@@ -106,6 +117,10 @@ def _probe_one(base_url: str, api_key: str, api_format: str, model: str) -> dict
     return {
         "model": model,
         "ok": ok,
+        "skipped": False,
+        "probe_type": "chat",
+        "modality": "text",
+        "endpoint": "chat",
         "latency_ms": latency_ms,
         "first_token_ms": first_token_ms,
         "chars_per_second": chars_per_second,
@@ -122,6 +137,7 @@ def run_probe(body: ProbeRunRequest):
         raise HTTPException(400, "base_url 不能为空")
 
     api_format = (body.api_format or "openai").strip() or "openai"
+    probe_type = (body.probe_type or "chat").strip() or "chat"
 
     async def generate():
         run_id = ""
@@ -130,7 +146,10 @@ def run_probe(body: ProbeRunRequest):
         list_error = ""
         list_latency_ms = 0
 
-        if not models:
+        if not models and probe_type != "chat":
+            models = default_models_for(probe_type)
+
+        if not models and probe_type == "chat":
             tmp = LLMClient(base_url=base_url, api_key=body.api_key, model="", api_format=api_format)
             try:
                 models, list_latency_ms, list_error = tmp.list_models()
@@ -144,11 +163,18 @@ def run_probe(body: ProbeRunRequest):
 
         yield f"data: {json.dumps({'type': 'models', 'models': models, 'total': len(models), 'list_latency_ms': list_latency_ms}, ensure_ascii=False)}\n\n"
 
-        run = json_store.create_probe_run(body.config_id, base_url, api_format, len(models))
+        run = json_store.create_probe_run(body.config_id, base_url, api_format, len(models), probe_type=probe_type)
         run_id = run["id"]
-        executor = concurrent.futures.ThreadPoolExecutor(max_workers=PROBE_MAX_WORKERS)
+        max_workers = PROBE_MAX_WORKERS if probe_type == "chat" else 3
+        executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)
         try:
-            futures = {executor.submit(_probe_one, base_url, body.api_key, api_format, model): model for model in models}
+            if probe_type == "chat":
+                futures = {executor.submit(_probe_one, base_url, body.api_key, api_format, model): model for model in models}
+            else:
+                futures = {
+                    executor.submit(probe_multimodal, base_url, body.api_key, probe_type, model): model
+                    for model in models
+                }
             for future in concurrent.futures.as_completed(futures):
                 try:
                     result = future.result()
@@ -156,6 +182,8 @@ def run_probe(body: ProbeRunRequest):
                     result = {
                         "model": futures[future],
                         "ok": False,
+                        "skipped": False,
+                        "probe_type": probe_type,
                         "latency_ms": 0,
                         "first_token_ms": None,
                         "chars_per_second": 0,

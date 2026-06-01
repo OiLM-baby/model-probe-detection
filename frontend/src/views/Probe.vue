@@ -53,6 +53,9 @@
           <span v-if="probeTime && !probing" class="probe-time">探测于 {{ probeTime }}</span>
         </div>
         <div class="toolbar-right">
+          <el-select v-model="probeType" size="small" style="width:170px" :disabled="probing">
+            <el-option v-for="item in probeTypes" :key="item.value" :label="item.label" :value="item.value" />
+          </el-select>
           <el-button type="success" :loading="probing" :disabled="!activeConfig || selectedModels.length === 0" @click="runProbe(false)">
             {{ probing ? '探测中...' : `探测选中 (${selectedModels.length})` }}
           </el-button>
@@ -82,6 +85,11 @@
             <span :style="failedCount > 0 ? 'color:#f56c6c' : ''" style="font-size:24px;font-weight:600">{{ failedCount }}</span>
           </template>
         </el-statistic>
+        <el-statistic v-if="skippedCount > 0" title="跳过">
+          <template #number>
+            <span style="color:#909399;font-size:24px;font-weight:600">{{ skippedCount }}</span>
+          </template>
+        </el-statistic>
         <el-statistic v-if="displayResults.length > 0" title="平均延迟" :value="avgLatencyMs" suffix="ms" />
       </div>
 
@@ -106,11 +114,14 @@
         <el-table-column type="selection" width="55" :selectable="row => row.ok" />
         <el-table-column label="状态" width="70" align="center">
           <template #default="{ row }">
-            <el-tag :type="row.ok ? 'success' : 'danger'" size="small">{{ row.ok ? 'OK' : 'FAIL' }}</el-tag>
+            <el-tag :type="row.ok ? 'success' : (row.skipped ? 'info' : 'danger')" size="small">
+              {{ row.ok ? 'OK' : (row.skipped ? 'SKIP' : 'FAIL') }}
+            </el-tag>
           </template>
         </el-table-column>
 
         <el-table-column prop="model" label="模型" min-width="180" show-overflow-tooltip />
+        <el-table-column prop="endpoint" label="接口" width="150" show-overflow-tooltip />
 
         <el-table-column label="失败原因" width="110" align="center">
           <template #default="{ row }">
@@ -121,7 +132,7 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="首 Token" prop="first_token_ms" width="100" align="right">
+        <el-table-column :label="probeType === 'chat' ? '首 Token' : '首响应'" prop="first_token_ms" width="100" align="right">
           <template #default="{ row }">
             <span :class="latencyClass(row.first_token_ms)">
               {{ row.first_token_ms != null ? row.first_token_ms + 'ms' : '-' }}
@@ -133,7 +144,7 @@
           <template #default="{ row }">{{ row.latency_ms }}ms</template>
         </el-table-column>
 
-        <el-table-column label="吐字速度" prop="chars_per_second" width="100" align="right">
+        <el-table-column v-if="probeType === 'chat'" label="吐字速度" prop="chars_per_second" width="100" align="right">
           <template #default="{ row }">
             {{ row.chars_per_second > 0 ? row.chars_per_second + ' c/s' : '-' }}
           </template>
@@ -153,7 +164,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onBeforeUnmount, onMounted } from 'vue'
+import { ref, computed, onBeforeUnmount, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Loading } from '@element-plus/icons-vue'
 import api from '../utils/api'
@@ -169,10 +180,18 @@ const listErrorCategory = ref('')
 const isDone = ref(false)
 const probeTime = ref('')
 const selectedModels = ref([])
+const probeType = ref('chat')
 let streamSeq = 0
 let abortController = null
 
 const form = ref({ label: '', base_url: '', api_key: '', api_format: '' })
+const probeTypes = [
+  { label: '聊天', value: 'chat' },
+  { label: '文生图', value: 'image_generation' },
+  { label: '图生图', value: 'image_edit' },
+  { label: 'Responses 图片', value: 'responses_image' },
+  { label: 'Banna 图片', value: 'banna_image' },
+]
 
 const displayResults = computed(() => {
   const map = new Map()
@@ -183,7 +202,8 @@ const displayResults = computed(() => {
 })
 const completedCount = computed(() => displayResults.value.length)
 const passedCount = computed(() => displayResults.value.filter(r => r.ok).length)
-const failedCount = computed(() => displayResults.value.filter(r => !r.ok).length)
+const skippedCount = computed(() => displayResults.value.filter(r => r.skipped).length)
+const failedCount = computed(() => displayResults.value.filter(r => !r.ok && !r.skipped).length)
 const sortedResults = computed(() => [...displayResults.value].sort((a, b) => a.model.localeCompare(b.model)))
 const avgLatencyMs = computed(() => {
   const done = displayResults.value.filter(r => r.latency_ms > 0)
@@ -193,6 +213,10 @@ const avgLatencyMs = computed(() => {
 
 onMounted(() => loadConfigs())
 onBeforeUnmount(() => stopActiveProbe())
+watch(probeType, () => {
+  selectedModels.value = []
+  if (activeConfig.value) selectConfig(activeConfig.value)
+})
 
 async function loadConfigs() {
   try {
@@ -229,7 +253,7 @@ async function selectConfig(cfg) {
   resetResults()
   // 加载最近一次探测记录
   try {
-    const { data: runs } = await api.get(`/api/probe/runs?config_id=${cfg.id}&limit=1`)
+    const { data: runs } = await api.get(`/api/probe/runs?config_id=${cfg.id}&limit=1&probe_type=${probeType.value}`)
     if (runs && runs.length > 0) {
       const run = runs[0]
       probeTime.value = run.created_at
@@ -276,6 +300,7 @@ async function runProbe(isFullProbe = true) {
     base_url: activeConfig.value.base_url,
     api_key: activeConfig.value.api_key || '',
     api_format: activeConfig.value.api_format || 'openai',
+    probe_type: probeType.value,
   }
 
   // 如果不是全量探测，添加选中的模型列表

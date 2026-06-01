@@ -6,7 +6,7 @@
 
 - 不依赖 MySQL / SQLite 业务数据库
 - Provider 配置、探针历史、检测历史保存为本地 JSON 文件
-- 探针支持 OpenAI / Anthropic / Responses 格式
+- 探针支持聊天、OpenAI 图片文生图、图生图、Responses 图片和 Banna 图片模型
 - 检测复用内置 TokenStar runtime，报告仍按 TokenStar 模板生成
 
 ## 启动
@@ -58,5 +58,5 @@ data/detection_runs.json
 
 ## 页面
 
-- `/probe`：保存 Provider 配置，拉取模型列表，执行首 Token 探测。
+- `/probe`：保存 Provider 配置，按探针类型执行聊天首 Token、图片生成/编辑、Banna 图片模型探测。
 - `/detection`：选择 Provider 和模型，执行 TokenStar 检测套件，查看历史并下载 Markdown 报告。
