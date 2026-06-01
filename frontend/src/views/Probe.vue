@@ -53,8 +53,14 @@
           <span v-if="probeTime && !probing" class="probe-time">探测于 {{ probeTime }}</span>
         </div>
         <div class="toolbar-right">
-          <el-select v-model="probeType" size="small" style="width:170px" :disabled="probing">
-            <el-option v-for="item in probeTypes" :key="item.value" :label="item.label" :value="item.value" />
+          <el-select v-model="probeType" size="small" style="width:190px" :disabled="probing">
+            <el-option-group
+              v-for="group in probeTypeGroups"
+              :key="group.label"
+              :label="group.label"
+            >
+              <el-option v-for="item in group.options" :key="item.value" :label="item.label" :value="item.value" />
+            </el-option-group>
           </el-select>
           <el-button type="success" :loading="probing" :disabled="!activeConfig || selectedModels.length === 0" @click="runProbe(false)">
             {{ probing ? '探测中...' : `探测选中 (${selectedModels.length})` }}
@@ -185,12 +191,22 @@ let streamSeq = 0
 let abortController = null
 
 const form = ref({ label: '', base_url: '', api_key: '', api_format: '' })
-const probeTypes = [
-  { label: '聊天', value: 'chat' },
-  { label: '文生图', value: 'image_generation' },
-  { label: '图生图', value: 'image_edit' },
-  { label: 'Responses 图片', value: 'responses_image' },
-  { label: 'Banna 图片', value: 'banna_image' },
+const probeTypeGroups = [
+  {
+    label: '文本',
+    options: [
+      { label: '聊天', value: 'chat' },
+    ],
+  },
+  {
+    label: '多模态',
+    options: [
+      { label: '文生图', value: 'image_generation' },
+      { label: '图生图', value: 'image_edit' },
+      { label: 'Responses 图片', value: 'responses_image' },
+      { label: 'Gemini/Banna 图片', value: 'banna_image' },
+    ],
+  },
 ]
 
 const displayResults = computed(() => {
