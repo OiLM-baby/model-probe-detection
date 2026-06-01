@@ -1,0 +1,65 @@
+# Model Probe Detection
+
+从 API Test UI 单独拆出的模型探针 + 模型检测工具。
+
+## 特点
+
+- 不依赖 MySQL / SQLite 业务数据库
+- Provider 配置、探针历史、检测历史保存为本地 JSON 文件
+- 探针支持 OpenAI / Anthropic / Responses 格式
+- 检测复用内置 TokenStar runtime，报告仍按 TokenStar 模板生成
+
+## 启动
+
+```bash
+pip install -r requirements.txt
+
+cd frontend
+npm install
+cd ..
+
+python run.py
+```
+
+默认地址：
+
+```text
+http://127.0.0.1:8090
+```
+
+开发前端：
+
+```bash
+cd frontend
+npm run dev
+```
+
+Vite 会把 `/api` 代理到 `http://127.0.0.1:8090`。
+
+## 数据文件
+
+运行后会自动生成：
+
+```text
+data/probe_configs.json
+data/probe_runs.json
+data/detection_runs.json
+```
+
+这些文件就是本工具的轻量存储，不需要数据库服务。
+
+## 环境变量
+
+| 变量 | 说明 | 默认值 |
+|---|---|---|
+| `MODEL_TOOL_HOST` | 后端监听地址 | `0.0.0.0` |
+| `MODEL_TOOL_PORT` | 后端监听端口 | `8090` |
+| `MODEL_TOOL_SKIP_FRONTEND_BUILD` | 启动时跳过前端构建 | 空 |
+| `API_TEST_TOKENSTAR_ROOT` | 覆盖 TokenStar runtime 路径 | `app/vendored/tokenstar_runtime` |
+| `API_TEST_TOKENSTAR_CONFIG` | 覆盖 TokenStar providers.yaml | `config/tokenstar/providers.yaml` |
+| `API_TEST_TOKENSTAR_BASELINES` | 覆盖 TokenStar baselines.yaml | `config/tokenstar/baselines.yaml` |
+
+## 页面
+
+- `/probe`：保存 Provider 配置，拉取模型列表，执行首 Token 探测。
+- `/detection`：选择 Provider 和模型，执行 TokenStar 检测套件，查看历史并下载 Markdown 报告。
