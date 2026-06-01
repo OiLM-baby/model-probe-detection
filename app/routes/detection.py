@@ -292,8 +292,6 @@ def _run_tokenstar(cfg: Any, models: list[str], suite: str) -> dict[str, Any]:
                 str(tmp_config),
                 "--suite",
                 suite,
-                "--run-id",
-                run_id,
                 "--workers",
                 str(min(max(len(models), 1), 4)),
             ],
