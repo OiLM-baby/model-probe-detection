@@ -90,6 +90,7 @@ def parse_args(argv):
     parser.add_argument("--config", default="config/providers.yaml", help="中转配置 YAML")
     parser.add_argument("--env", choices=["test", "prod"], help="运行环境，默认读取配置 app.default_env")
     parser.add_argument("--suite", default=None, help="测试功能套件，默认 availability")
+    parser.add_argument("--run-id", default=None, help="本次运行 ID，默认自动生成")
     parser.add_argument("--provider", action="append", help="只运行指定中转名，可传多次")
     parser.add_argument("--send-wechat", action="store_true", help="发送企业微信汇总")
     parser.add_argument("--send-email", action="store_true", help="发送邮箱汇总")
@@ -153,7 +154,7 @@ def main(argv=None):
 
     if not os.path.isabs(args.config):
         args.config = os.path.join(os.path.dirname(os.path.abspath(__file__)), args.config)
-    app_config = load_app_config(args.config, args.env, args.suite)
+    app_config = load_app_config(args.config, args.env, args.suite, args.run_id)
 
     suite_tests = app_config.suites.get(app_config.runtime.suite)
     if not suite_tests:
@@ -427,6 +428,9 @@ def main(argv=None):
     html_renderer.render(payload, html_path)
 
     payload_json = json.dumps(payload, ensure_ascii=False)
+    json_path = os.path.join(archive_dir, f"tokenstar_report_{report_id}.json")
+    with open(json_path, "w", encoding="utf-8") as handle:
+        handle.write(payload_json)
 
     # ── 收尾 ───────────────────────────────────────────────
     bus.publish(ProgressEvent(
